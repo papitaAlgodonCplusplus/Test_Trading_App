@@ -23,7 +23,7 @@ class Agent(Portfolio):
         super().__init__(balance=balance)
         self.model_type = 'DQN'
         self.state_dim = state_dim
-        self.action_dim = 3  # hold, buy, sell
+        self.action_dim = 5  # hold, buy, sell, pending_buy, pending_sell
         self.memory = deque(maxlen=2000)
         self.buffer_size = 2880 
 

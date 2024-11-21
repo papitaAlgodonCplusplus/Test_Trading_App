@@ -70,6 +70,8 @@ def obtain_data():
             "hold_signals": [],
             "buy_signals": [],
             "sell_signals": [],
+            "place_buy_signals": [],
+            "place_sell_signals": [],
             "month_starts": [],
             "portfolio_info": {
                 "initial_portfolio_value": 0,
@@ -115,12 +117,11 @@ def obtain_data():
                 processed_month_starts.add(dates[i])
 
     # Identify signals based on actions
-    hold_signals = [(dates[i], prices[i])
-                    for i in range(len(dates)) if actions[i] == 0]
-    buy_signals = [(dates[i], prices[i])
-                   for i in range(len(dates)) if actions[i] == 1]
-    sell_signals = [(dates[i], prices[i])
-                    for i in range(len(dates)) if actions[i] == 2]
+    hold_signals = [(dates[i], prices[i]) for i in range(len(dates)) if actions[i] == 0]
+    buy_signals = [(dates[i], prices[i]) for i in range(len(dates)) if actions[i] == 1]
+    sell_signals = [(dates[i], prices[i]) for i in range(len(dates)) if actions[i] == 2]
+    place_buy_signals = [(dates[i], prices[i]) for i in range(len(dates)) if actions[i] == 3]
+    place_sell_signals = [(dates[i], prices[i]) for i in range(len(dates)) if actions[i] == 4]
 
     return {
         "x_vals": dates,
@@ -128,7 +129,9 @@ def obtain_data():
         "hold_signals": hold_signals,
         "buy_signals": buy_signals,
         "sell_signals": sell_signals,
-        "month_starts": month_starts,  # Only new month starts
+        "place_buy_signals": place_buy_signals,
+        "place_sell_signals": place_sell_signals,
+        "month_starts": month_starts,
         "portfolio_info": {
             "initial_portfolio_value": initial_portfolio_value,
             "current_portfolio_value": current_portfolio_value,
@@ -167,10 +170,10 @@ def update_dashboard_and_table(n_intervals, stored_data):
 
     # Signals with neon colors
     for signals, label, color in zip(
-        [updated_data["hold_signals"], updated_data["buy_signals"],
-            updated_data["sell_signals"]],
-        ["Hold", "Buy", "Sell"],
-        ["yellow", "lime", "red"],
+        [updated_data["hold_signals"], updated_data["buy_signals"], updated_data["sell_signals"],
+         updated_data["place_buy_signals"], updated_data["place_sell_signals"]],
+        ["Hold", "Buy", "Sell", "Pending Buy", "Pending Sell"],
+        ["yellow", "lime", "red", "blue", "magenta"],
     ):
         if signals:
             signal_dates, signal_prices = zip(*signals)
@@ -189,15 +192,11 @@ def update_dashboard_and_table(n_intervals, stored_data):
                 )
             )
 
-    # Add new vertical lines and annotations for new month starts
     for month_start in updated_data["month_starts"]:
         if month_start not in [line["x0"] for line in vertical_lines]:
-            # Determine the line color based on portfolio info
             line_color = (
                 "lime" if portfolio_info["monthly_gains"] > portfolio_info["monthly_losses"] else "red"
             )
-
-            # Create the line as a shape
             new_line = dict(
                 type="line",
                 x0=month_start,
@@ -209,8 +208,6 @@ def update_dashboard_and_table(n_intervals, stored_data):
                 line=dict(color=line_color, width=3, dash="dash"),
             )
             vertical_lines.append(new_line)
-
-            # Create an annotation for the month
             new_annotation = dict(
                 x=month_start,
                 y=1.05,
@@ -228,8 +225,8 @@ def update_dashboard_and_table(n_intervals, stored_data):
     # Apply all vertical lines to the figure
     fig.update_layout(
         shapes=vertical_lines,
-        paper_bgcolor="rgba(0, 0, 0, 0)",  # Transparent to show animated background
-        plot_bgcolor="rgba(0, 0, 0, 0)",  # Transparent to show animated background
+        paper_bgcolor="rgba(0, 0, 0, 0)",
+        plot_bgcolor="rgba(0, 0, 0, 0)",
     )
 
     # Apply all annotations to the figure
@@ -240,20 +237,18 @@ def update_dashboard_and_table(n_intervals, stored_data):
     fig.add_annotation(
         xref="paper",
         yref="paper",
-        x=1.0,  # Align to the right edge
-        y=0.0,  # Align to the bottom edge
-        text=(
-            f"<b>Portfolio</b><br>"
-            f"Original: ${portfolio_info['initial_portfolio_value']:.2f}<br>"
-            f"Current: ${portfolio_info['current_portfolio_value']:.2f}<br>"
-            f"Monthly: ${portfolio_info['monthly_portfolio_value']:.2f}<br>"
-            f"Profit: ${portfolio_info['total_gains']:.2f}<br>"
-            f"Loss: ${portfolio_info['total_losses']:.2f}"
-        ),
+        x=1.0,
+        y=0.0,
+        text=(f"<b>Portfolio</b><br>"
+              f"Original: ${portfolio_info['initial_portfolio_value']:.2f}<br>"
+              f"Current: ${portfolio_info['current_portfolio_value']:.2f}<br>"
+              f"Monthly: ${portfolio_info['monthly_portfolio_value']:.2f}<br>"
+              f"Profit: ${portfolio_info['total_gains']:.2f}<br>"
+              f"Loss: ${portfolio_info['total_losses']:.2f}"),
         showarrow=False,
         align="right",
         font=dict(color="cyan", size=12, family="Courier New"),
-        bgcolor="rgba(0, 0, 0, 0.7)",  # Adjusted alpha for semi-transparency
+        bgcolor="rgba(0, 0, 0, 0.7)",
         bordercolor="cyan",
         borderwidth=2,
     )
@@ -262,12 +257,9 @@ def update_dashboard_and_table(n_intervals, stored_data):
         xaxis=dict(title="Date", showgrid=False, zeroline=False),
         yaxis=dict(title="Value ($)", showgrid=False, zeroline=False),
         template="plotly_dark",
-        # Transparent to show animated background
         paper_bgcolor="rgba(0, 0, 0, 0)",
-        # Transparent to show animated background
         plot_bgcolor="rgba(0, 0, 0, 0)",
         font=dict(color="white", size=14),
-        # Increased bottom margin for the table
         margin=dict(t=50, b=150, l=50, r=50),
     )
 

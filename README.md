@@ -43,6 +43,7 @@ This project demonstrates a deep reinforcement learning model for stock trading,
 
 You can customize the training parameters using command line options:
 
+- `--dash_app`: Using the dash_app to visualize backtesting (default: `true`)
 - `--model_name`: Name of the model (default: `DDQN`)
 - `--stock_name`: Stock name (default: `^GSPC_2010-2015`)
 - `--window_size`: Span (days) of observation (default: `30`)

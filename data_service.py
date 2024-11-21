@@ -15,3 +15,14 @@ def get_dates(stock_name):
     '''Return a list of dates from a CSV file'''
     df = load_stock_data(stock_name)
     return pd.to_datetime(df['Date']).tolist()
+
+def get_key_levels(stock_name):
+    '''Compute key levels (significant highs, lows, and midpoints)'''
+    df = load_stock_data(stock_name)
+    highs = df['High'].tolist()
+    lows = df['Low'].tolist()
+    midpoints = [(high + low) / 2 for high, low in zip(highs, lows)]
+
+    # Combine significant levels into a single list
+    key_levels = sorted(set(highs + lows + midpoints))
+    return key_levels

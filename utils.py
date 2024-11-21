@@ -13,6 +13,7 @@ class Portfolio:
         self.portfolio_values = [balance]
         self.buy_dates = []
         self.sell_dates = []
+        self.pending_orders = []
 
     def reset_portfolio(self):
         self.balance = self.monthly_portfolio_value
@@ -185,7 +186,9 @@ def plot_portfolio_returns_across_episodes(model_name, returns_across_episodes):
     plt.savefig('visualizations/{}_returns_ep{}.png'.format(model_name, len_episodes))
     plt.show()
 
-def update_plot(t, price, action, x_vals, y_vals, hold_signals, buy_signals, sell_signals, current_portfolio_value, monthly_portfolio_value, dates, total_gains, total_losses, monthly_gains, monthly_losses, initial_portfolio_value):
+def update_plot(t, price, action, x_vals, y_vals, hold_signals, buy_signals, sell_signals,
+                current_portfolio_value, monthly_portfolio_value, dates, total_gains, total_losses,
+                monthly_gains, monthly_losses, initial_portfolio_value, place_buy_signals, place_sell_signals):
     # Append data points
     x_vals.append(dates[t])
     y_vals.append(price)
@@ -197,6 +200,10 @@ def update_plot(t, price, action, x_vals, y_vals, hold_signals, buy_signals, sel
         buy_signals.append((dates[t], price))
     elif action == 2:  # Sell
         sell_signals.append((dates[t], price))
+    elif action == 3:  # Place Pending Buy
+        place_buy_signals.append((dates[t], price))
+    elif action == 4:  # Place Pending Sell
+        place_sell_signals.append((dates[t], price))
 
     # Calculate monthly markers and portfolio stats
     marker_color = 'green' if monthly_gains > monthly_losses else 'red'
@@ -211,6 +218,8 @@ def update_plot(t, price, action, x_vals, y_vals, hold_signals, buy_signals, sel
             "hold": hold_signals,
             "buy": buy_signals,
             "sell": sell_signals,
+            "place_pending_buy": place_buy_signals,
+            "place_pending_sell": place_sell_signals,
         },
         "portfolio_info": {
             "initial_portfolio_value": initial_portfolio_value,
@@ -231,3 +240,4 @@ def update_plot(t, price, action, x_vals, y_vals, hold_signals, buy_signals, sel
     }
 
     return data_point
+
