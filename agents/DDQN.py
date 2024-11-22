@@ -1,6 +1,8 @@
+import sys
+import os
 import random
 from collections import deque
-
+from contextlib import redirect_stdout
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Sequential
@@ -9,21 +11,21 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import load_model
 from tensorflow.keras.optimizers import Adam
 import concurrent.futures
-import os
+import logging
+
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Disable TensorFlow logging
+tf.get_logger().setLevel('ERROR')  # Disable TensorFlow logging
+tf.autograph.set_verbosity(0)
 
 from utils import Portfolio
 
-
-# references:
-# https://arxiv.org/pdf/1802.09477.pdf
-# https://arxiv.org/pdf/1509.06461.pdf
-# https://papers.nips.cc/paper/3964-double-q-learning.pdf
 class Agent(Portfolio):
-    def __init__(self, state_dim, balance, is_eval=False, model_name=""):
+    def __init__(self, state_dim, balance, is_eval=False, model_name="", loaded=False):
         super().__init__(balance=balance)
         self.model_type = 'DQN'
         self.state_dim = state_dim
-        self.action_dim = 5  # hold, buy, sell, pending_buy, pending_sell
+        self.action_dim = 6  # hold, buy, sell, pending_buy, pending_sell, execute_pendings
         self.memory = deque(maxlen=2000)
         self.buffer_size = 2880 
 
@@ -34,8 +36,8 @@ class Agent(Portfolio):
         self.epsilon_decay = 0.990 # decrease exploration rate as the agent becomes good at trading
         self.is_eval = is_eval
 
-        self.model = load_model(f'saved_models/{model_name}.h5') if is_eval else self.model()
-        self.model_target = load_model(f'saved_models/{model_name}_target.h5') if is_eval else self.model
+        self.model = load_model(f'saved_models/best_{model_name}.h5') if loaded else self.model()
+        self.model_target = load_model(f'saved_models/best_{model_name}.h5') if loaded else self.model
         self.model_target.set_weights(self.model.get_weights()) # hard copy model parameters to target model parameters
 
         if not self.is_eval:
@@ -55,7 +57,7 @@ class Agent(Portfolio):
         model.add(Dense(units=32, activation='relu'))
         model.add(Dense(units=8, activation='relu'))
         model.add(Dense(self.action_dim, activation='softmax'))
-        model.compile(loss='mse', optimizer=Adam(lr=0.001))
+        model.compile(loss='mse', optimizer=Adam(lr=0.001), run_eagerly=False)
         return model
 
     def reset(self):
@@ -79,10 +81,12 @@ class Agent(Portfolio):
         mini_batch = random.sample(self.memory, self.buffer_size)
 
         def predict_next_state(next_state):
-            return self.model_target.predict(next_state, verbose=0)[0]
+            with open(os.devnull, 'w') as f, redirect_stdout(f):
+                return self.model_target.predict(next_state, verbose=0)[0]
 
-        def predict_state(state):
-            return self.model.predict(state, verbose=0)
+        def predict_state(state):        
+            with open(os.devnull, 'w') as f, redirect_stdout(f):
+                        return self.model.predict(state, verbose=0)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers = min(32, (os.cpu_count() or 1) + 4)) as executor:
             next_states = [tup[3] for tup in mini_batch]
@@ -104,10 +108,16 @@ class Agent(Portfolio):
                 next_actions = future.result()
                 next_actions_list.append(next_actions)
 
+        original_stdout = sys.stdout  # Save a reference to the original standard output
+        sys.stdout = open(os.devnull, 'w')  # Redirect standard output to null
+
         for i, (state, actions, reward, next_state, done) in enumerate(mini_batch):
             Q_expected = reward + (1 - done) * self.gamma * np.amax(Q_expected_values[i])
             next_actions_list[i][0][np.argmax(actions)] = Q_expected
             history = self.model.fit(state, next_actions_list[i], epochs=1, verbose=0, callbacks=[])
+
+        sys.stdout.close()
+        sys.stdout = original_stdout  # Reset standard output to its original value
 
         self.update_model_target()
 

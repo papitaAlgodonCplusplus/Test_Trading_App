@@ -14,6 +14,7 @@ def start(using_dash_app=True, model_name='DDQN', stock_name='^GSPC_2010-2015', 
         threading.Thread(target=lambda: dash_app.run_server(debug=False), daemon=True).start()
 
     # Run training (this will push data to the queue)
+    print("Start training with: ", model_name, stock_name, window_size, num_episode, initial_balance)
     returns_across_episodes = train_model(
         model_name, stock_name, window_size, num_episode, initial_balance, stock_prices, dates, key_levels
     )

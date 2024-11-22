@@ -188,7 +188,8 @@ def plot_portfolio_returns_across_episodes(model_name, returns_across_episodes):
 
 def update_plot(t, price, action, x_vals, y_vals, hold_signals, buy_signals, sell_signals,
                 current_portfolio_value, monthly_portfolio_value, dates, total_gains, total_losses,
-                monthly_gains, monthly_losses, initial_portfolio_value, place_buy_signals, place_sell_signals):
+                monthly_gains, monthly_losses, initial_portfolio_value, place_buy_signals, place_sell_signals,
+                pending_orders_signals, execution_result):
     # Append data points
     x_vals.append(dates[t])
     y_vals.append(price)
@@ -204,11 +205,14 @@ def update_plot(t, price, action, x_vals, y_vals, hold_signals, buy_signals, sel
         place_buy_signals.append((dates[t], price))
     elif action == 4:  # Place Pending Sell
         place_sell_signals.append((dates[t], price))
+    elif action == 5:  # Execute Pending Orders (Buy/Sell)
+        pending_orders_signals.append((dates[t], price))
 
     # Calculate monthly markers and portfolio stats
-    marker_color = 'green' if monthly_gains > monthly_losses else 'red'
+    marker_color = 'green' if (monthly_gains - abs(monthly_losses)) > 0 else 'red'
     is_month_start = t > 0 and dates[t].month != dates[t - 1].month
 
+    print(execution_result)
     # Construct the data_point in the expected format
     data_point = {
         "date": dates[t],
@@ -220,6 +224,7 @@ def update_plot(t, price, action, x_vals, y_vals, hold_signals, buy_signals, sel
             "sell": sell_signals,
             "place_pending_buy": place_buy_signals,
             "place_pending_sell": place_sell_signals,
+            "pending_orders": pending_orders_signals,
         },
         "portfolio_info": {
             "initial_portfolio_value": initial_portfolio_value,

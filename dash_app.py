@@ -24,6 +24,7 @@ monthly_gains = []
 monthly_losses = []
 vertical_lines = []
 month_annotations = []
+MAX_X = 2000
 
 # Layout
 app.layout = html.Div(
@@ -56,10 +57,48 @@ app.layout = html.Div(
 
 processed_month_starts = set()
 
+
 def obtain_data():
     global monthly_gains, monthly_losses
 
     while not data_queue.empty():
+        if data_queue.get().get("signal") == "RESET":
+            print("Resetting data...")
+            processed_month_starts.clear()
+            monthly_gains = []
+            monthly_losses = []
+            dates.clear()
+            prices.clear()
+            actions.clear()
+            vertical_lines.clear()
+            month_annotations.clear()
+            total_gains = 0
+            total_losses = 0
+            monthly_portfolio_value = 0
+            current_portfolio_value = 0
+            data_points.clear()
+
+            return {
+                "x_vals": [],
+                "y_vals": [],
+                "hold_signals": [],
+                "buy_signals": [],
+                "sell_signals": [],
+                "place_buy_signals": [],
+                "place_sell_signals": [],
+                "pending_orders_signals": [],
+                "month_starts": [],
+                "portfolio_info": {
+                    "initial_portfolio_value": 0,
+                    "current_portfolio_value": 0,
+                    "monthly_portfolio_value": 0,
+                    "total_gains": 0,
+                    "total_losses": 0,
+                    "monthly_gains": 0,
+                    "monthly_losses": 0,
+                },
+            }
+
         data_points.append(data_queue.get())
 
     if not data_points:
@@ -72,6 +111,7 @@ def obtain_data():
             "sell_signals": [],
             "place_buy_signals": [],
             "place_sell_signals": [],
+            "pending_orders_signals": [],
             "month_starts": [],
             "portfolio_info": {
                 "initial_portfolio_value": 0,
@@ -117,11 +157,18 @@ def obtain_data():
                 processed_month_starts.add(dates[i])
 
     # Identify signals based on actions
-    hold_signals = [(dates[i], prices[i]) for i in range(len(dates)) if actions[i] == 0]
-    buy_signals = [(dates[i], prices[i]) for i in range(len(dates)) if actions[i] == 1]
-    sell_signals = [(dates[i], prices[i]) for i in range(len(dates)) if actions[i] == 2]
-    place_buy_signals = [(dates[i], prices[i]) for i in range(len(dates)) if actions[i] == 3]
-    place_sell_signals = [(dates[i], prices[i]) for i in range(len(dates)) if actions[i] == 4]
+    hold_signals = [(dates[i], prices[i])
+                    for i in range(len(dates)) if actions[i] == 0]
+    buy_signals = [(dates[i], prices[i])
+                   for i in range(len(dates)) if actions[i] == 1]
+    sell_signals = [(dates[i], prices[i])
+                    for i in range(len(dates)) if actions[i] == 2]
+    place_buy_signals = [(dates[i], prices[i])
+                         for i in range(len(dates)) if actions[i] == 3]
+    place_sell_signals = [(dates[i], prices[i])
+                          for i in range(len(dates)) if actions[i] == 4]
+    pending_orders_signals = [(dates[i], prices[i])
+                              for i in range(len(dates)) if actions[i] == 5]
 
     return {
         "x_vals": dates,
@@ -131,6 +178,7 @@ def obtain_data():
         "sell_signals": sell_signals,
         "place_buy_signals": place_buy_signals,
         "place_sell_signals": place_sell_signals,
+        "pending_orders_signals": pending_orders_signals,
         "month_starts": month_starts,
         "portfolio_info": {
             "initial_portfolio_value": initial_portfolio_value,
@@ -143,8 +191,10 @@ def obtain_data():
         },
     }
 
+
 @app.callback(
-    [Output("trading-graph", "figure"), Output("monthly-table", "figure"), Output("monthly-data-store", "data")],
+    [Output("trading-graph", "figure"), Output("monthly-table",
+                                               "figure"), Output("monthly-data-store", "data")],
     [Input("update-interval", "n_intervals")],
     [State("monthly-data-store", "data")],
 )
@@ -171,9 +221,9 @@ def update_dashboard_and_table(n_intervals, stored_data):
     # Signals with neon colors
     for signals, label, color in zip(
         [updated_data["hold_signals"], updated_data["buy_signals"], updated_data["sell_signals"],
-         updated_data["place_buy_signals"], updated_data["place_sell_signals"]],
-        ["Hold", "Buy", "Sell", "Pending Buy", "Pending Sell"],
-        ["yellow", "lime", "red", "blue", "magenta"],
+         updated_data["place_buy_signals"], updated_data["place_sell_signals"], updated_data["pending_orders_signals"]],
+        ["Hold", "Buy", "Sell", "Pending Buy", "Pending Sell", "Execute Pending"],
+        ["yellow", "lime", "red", "blue", "magenta", "orange"],
     ):
         if signals:
             signal_dates, signal_prices = zip(*signals)
@@ -254,7 +304,13 @@ def update_dashboard_and_table(n_intervals, stored_data):
     )
 
     fig.update_layout(
-        xaxis=dict(title="Date", showgrid=False, zeroline=False),
+        xaxis=dict(
+            title="Date",
+            showgrid=False,
+            zeroline=False,
+            range=[updated_data["x_vals"][0], updated_data["x_vals"]
+                   [-1]] if updated_data["x_vals"] else [0, 1],
+        ),
         yaxis=dict(title="Value ($)", showgrid=False, zeroline=False),
         template="plotly_dark",
         paper_bgcolor="rgba(0, 0, 0, 0)",
@@ -271,7 +327,8 @@ def update_dashboard_and_table(n_intervals, stored_data):
     # Sort the month starts for consistency
     existing_month_starts.sort()
     existing_month_starts = [
-        datetime.strptime(month, '%Y-%m-%dT%H:%M:%S') if isinstance(month, str) else month
+        datetime.strptime(
+            month, '%Y-%m-%dT%H:%M:%S') if isinstance(month, str) else month
         for month in existing_month_starts
     ]
 
@@ -283,7 +340,6 @@ def update_dashboard_and_table(n_intervals, stored_data):
             existing_monthly_gains[month_key] = portfolio_info["monthly_gains"]
             existing_monthly_losses[month_key] = portfolio_info["monthly_losses"]
 
-
     # Generate table data
     month_names = [month.strftime('%B %Y') for month in existing_month_starts]
     monthly_revenue = [existing_monthly_gains.get(
@@ -291,7 +347,8 @@ def update_dashboard_and_table(n_intervals, stored_data):
     monthly_losses = [existing_monthly_losses.get(
         month.strftime('%Y-%m'), 0) for month in existing_month_starts]
 
-    monthly_profit = [revenue - loss for revenue, loss in zip(monthly_revenue, monthly_losses)]
+    monthly_profit = [revenue - loss for revenue,
+                      loss in zip(monthly_revenue, monthly_losses)]
 
     table_fig = go.Figure(
         data=[

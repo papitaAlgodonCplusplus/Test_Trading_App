@@ -20,6 +20,7 @@ class AgentService:
         self.total_losses = 0
         self.monthly_gains = 0
         self.monthly_losses = 0
+        self.pending_orders = []
 
     def reset(self):
         self.agent.reset()
@@ -44,12 +45,12 @@ class AgentService:
             self.agent.critic.model.save_weights(
                 f'saved_models/DDPG_ep{episode}_critic.h5')
         elif model_name == 'DDQN':
-            self.agent.model.save(f'saved_models/DDQN_ep{episode}.h5')
+            self.agent.model.save(f'saved_models/best_{model_name}.h5')
 
     def execute_action(self, action, stock_prices, t, key_levels=None):
         """
         Executes the selected action based on the action space.
-        
+
         Parameters:
             action (int): Index of the action to be executed.
             stock_prices (list): List of stock prices.
@@ -57,7 +58,7 @@ class AgentService:
             key_levels (list): Key liquidity levels for pending orders (if applicable).
 
         Returns:
-            str: A message describing the result of the executed action.
+            dict: Action execution status.
         """
         if action == 0:  # Hold
             return ActionService.hold(self.agent, stock_prices, t)
@@ -73,8 +74,13 @@ class AgentService:
             if key_levels is None:
                 return "Pending Sell Skipped (Missing Key Levels)"
             return ActionService.place_pending_sell(self.agent, stock_prices, t, key_levels)
+        elif action == 5:  # Execute Pending Orders
+            return ActionService.execute_pending_orders(self.agent, stock_prices, t)
         else:
-            return f"Invalid Action: {action}"
-
-    def calculate_reward(self, stock_prices, t, previous_portfolio_value):
-        return RewardService.calculate_reward(self.agent, stock_prices, t, previous_portfolio_value)
+            return {
+                "status": "error",
+                "action": "none",
+                "details": {
+                    "reason": "Invalid Action",
+                }
+            }

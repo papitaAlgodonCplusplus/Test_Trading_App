@@ -2,6 +2,7 @@ import random
 from collections import deque
 
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras import Sequential
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.layers import Dense
@@ -10,6 +11,12 @@ from tensorflow.keras.optimizers import Adam
 
 from utils import Portfolio
 
+import logging
+import os
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Disable TensorFlow logging
+tf.get_logger().setLevel('ERROR')  # Disable TensorFlow logging
+tf.autograph.set_verbosity(0)
 
 # reference:
 # https://arxiv.org/pdf/1312.5602.pdf
@@ -60,10 +67,10 @@ class Agent(Portfolio):
 
         for state, actions, reward, next_state, done in mini_batch:
             if not done:
-                Q_target_value = reward + self.gamma * np.amax(self.model.predict(next_state)[0])
+                Q_target_value = reward + self.gamma * np.amax(self.model.predict(next_state, verbose=0)[0])
             else:
                 Q_target_value = reward
-            next_actions = self.model.predict(state)
+            next_actions = self.model.predict(state, verbose=0)
             next_actions[0][np.argmax(actions)] = Q_target_value
             history = self.model.fit(state, next_actions, epochs=1, verbose=0)
 

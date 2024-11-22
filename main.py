@@ -50,10 +50,10 @@ if __name__ == "__main__":
 
     # Training-specific options
     parser.add_argument('--model_name', action="store", dest="model_name", default='DDQN', help="model name")
-    parser.add_argument('--stock_name', action="store", dest="stock_name", default='^GSPC_2010-2015', help="stock name")
+    parser.add_argument('--stock_name', action="store", dest="stock_name", default='^USD_CRC_2020-2021', help="stock name")
     parser.add_argument('--window_size', action="store", dest="window_size", default=30, type=int, help="span (days) of observation")
-    parser.add_argument('--num_episode', action="store", dest="num_episode", default=1, type=int, help='episode number')
-    parser.add_argument('--initial_balance', action="store", dest="initial_balance", default=50000, type=int, help='initial balance')
+    parser.add_argument('--num_episode', action="store", dest="num_episode", default=5, type=int, help='episode number')
+    parser.add_argument('--initial_balance', action="store", dest="initial_balance", default=1000, type=int, help='initial balance')
 
     # Default Dash app behavior
     parser.set_defaults(using_dash_app=True)

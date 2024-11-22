@@ -10,6 +10,13 @@ from keras.optimizers import Adam
 
 from utils import Portfolio
 
+import logging
+import os
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Disable TensorFlow logging
+tf.get_logger().setLevel('ERROR')  # Disable TensorFlow logging
+tf.autograph.set_verbosity(0)
+
 # Tensorflow GPU configuration
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -158,7 +165,7 @@ class Agent(Portfolio):
         self.memory.append((state, actions, reward, next_state, done))
 
     def act(self, state, t):
-        actions = self.actor.model.predict(state)[0]
+        actions = self.actor.model.predict(state, verbose=0)[0]
         if not self.is_eval:
             return self.noise.get_actions(actions, t)
         return actions

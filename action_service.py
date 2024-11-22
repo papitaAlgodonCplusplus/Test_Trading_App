@@ -11,18 +11,44 @@ class ActionService:
         """Wait without taking action."""
         trend_direction = get_trend(stock_prices, t)
         if trend_direction == "neutral":
-            return f'Hold (Neutral Trend)'
-        return f'Hold'
+            return {
+                "status": "success",
+                "action": "hold",
+                "details": {
+                    "trend": "neutral",
+                    "balance": agent.balance,
+                    "inventory": agent.inventory,
+                }
+            }
+        return {
+            "status": "success",
+            "action": "hold",
+            "details": {
+                "trend": "other",
+                "balance": agent.balance,
+                "inventory": agent.inventory,
+            }
+        }
 
     @staticmethod
     def buy(agent, stock_prices, t):
         """Execute a buy action if conditions are met."""
         order_blocks = get_order_blocks(stock_prices, t)
+        if order_blocks is None:
+            order_blocks = {}
         if agent.balance > stock_prices[t] and order_blocks.get('demand_zone', False):
             agent.balance -= stock_prices[t]
             agent.inventory.append(stock_prices[t])
-            return f'Buy at ${stock_prices[t]:.2f} (Order Block Confirmed)'
-        return f'Buy Skipped (Insufficient Funds or No Demand Zone)'
+            return {
+                "status": "success",
+                "action": "buy",
+                "details": {"price": stock_prices[t], "balance": agent.balance, "inventory": agent.inventory}
+            }
+        return {
+            "status": "skipped",
+            "action": "buy",
+            "details": {"reason": "Insufficient Funds or No Demand Zone"}
+        }
 
     @staticmethod
     def sell(agent, stock_prices, t):
@@ -34,17 +60,42 @@ class ActionService:
             agent.balance += stock_prices[t]
             bought_price = agent.inventory.pop(0)
             profit = stock_prices[t] - bought_price
-            return f'Sell at ${stock_prices[t]:.2f} | Profit: ${profit:.2f}'
-        return f'Sell Skipped (No Liquidity Zone or Divergence Signal)'
+            return {
+                "status": "success",
+                "action": "sell",
+                "details": {"price": stock_prices[t], "profit": profit, "balance": agent.balance, "inventory": agent.inventory}
+            }
+        return {
+            "status": "skipped",
+            "action": "sell",
+            "details": {"reason": "No Liquidity Zone or Divergence Signal"}
+        }
 
     @staticmethod
     def place_pending_buy(agent, stock_prices, t, key_levels):
         """Place a pending buy order in a liquidity zone."""
         liquidity_sweep = get_liquidity_sweep(stock_prices, t, key_levels)
         if agent.balance > stock_prices[t] and liquidity_sweep:
+            agent.balance -= stock_prices[t]  # Reserve funds immediately
             agent.pending_orders.append(("buy", stock_prices[t]))
-            return f'Pending Buy Order at ${stock_prices[t]:.2f} (Liquidity Sweep)'
-        return f'Pending Buy Skipped (No Liquidity Sweep or Insufficient Funds)'
+            return {
+                "status": "success",
+                "action": "pending_buy",
+                "details": {
+                    "price": stock_prices[t],
+                    "balance": agent.balance,
+                    "inventory": agent.inventory,
+                }
+            }
+        return {
+            "status": "skipped",
+            "action": "pending_buy",
+            "details": {
+                "reason": "No Liquidity Sweep or Insufficient Funds",
+                "balance": agent.balance,
+                "inventory": agent.inventory,
+            }
+        }
 
     @staticmethod
     def place_pending_sell(agent, stock_prices, t, key_levels):
@@ -52,8 +103,51 @@ class ActionService:
         liquidity_sweep = get_liquidity_sweep(stock_prices, t, key_levels)
         if len(agent.inventory) > 0 and liquidity_sweep:
             agent.pending_orders.append(("sell", stock_prices[t]))
-            return f'Pending Sell Order at ${stock_prices[t]:.2f} (Liquidity Sweep)'
-        return f'Pending Sell Skipped (No Liquidity Sweep or Empty Inventory)'
+            return {
+                "status": "success",
+                "action": "pending_sell",
+                "details": {
+                    "price": stock_prices[t],
+                    "balance": agent.balance,
+                    "inventory": agent.inventory,
+                }
+            }
+        return {
+            "status": "skipped",
+            "action": "pending_sell",
+            "details": {
+                "reason": "No Liquidity Sweep or Empty Inventory",
+                "balance": agent.balance,
+                "inventory": agent.inventory,
+            }
+        }
+
+    @staticmethod
+    def execute_pending_orders(agent, stock_prices, t):
+        """Check and execute pending orders if conditions are met."""
+        executed_orders = []
+        for order in agent.pending_orders[:]:
+            order_type, target_price = order
+
+            if order_type == "buy" and agent.balance > target_price and stock_prices[t] <= target_price:
+                agent.balance -= target_price
+                agent.inventory.append(target_price)
+                executed_orders.append({"type": "buy", "price": target_price})
+
+            elif order_type == "sell" and len(agent.inventory) > 0 and stock_prices[t] >= target_price:
+                bought_price = agent.inventory.pop(0)
+                profit = target_price - bought_price
+                agent.balance += target_price
+                executed_orders.append({"type": "sell", "price": target_price, "profit": profit})
+
+        # Remove executed orders
+        agent.pending_orders = [order for order in agent.pending_orders if {"type": order[0], "price": order[1]} not in executed_orders]
+
+        return {
+            "status": "executed",
+            "action": "execute_pending_orders",
+            "details": {"executed_orders": executed_orders, "balance": agent.balance, "inventory": agent.inventory}
+        }
 
     # -------------------- AUXILIARY ANALYSIS FUNCTIONS --------------------
     @staticmethod
