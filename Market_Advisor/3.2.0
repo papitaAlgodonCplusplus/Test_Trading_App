@@ -1,0 +1,24 @@
+Collecting scikeras==0.13.0
+  Using cached scikeras-0.13.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting keras
+  Using cached keras-3.6.0-py3-none-any.whl.metadata (5.8 kB)
+Requirement already satisfied: scikit-learn>=1.4.2 in c:\python311\lib\site-packages (from scikeras==0.13.0) (1.5.2)
+Requirement already satisfied: absl-py in c:\python311\lib\site-packages (from keras) (2.1.0)
+Requirement already satisfied: numpy in c:\python311\lib\site-packages (from keras) (1.24.3)
+Requirement already satisfied: rich in c:\tools\manim\lib\site-packages (from keras) (13.7.1)
+Requirement already satisfied: namex in c:\python311\lib\site-packages (from keras) (0.0.8)
+Requirement already satisfied: h5py in c:\python311\lib\site-packages (from keras) (3.12.1)
+Requirement already satisfied: optree in c:\python311\lib\site-packages (from keras) (0.13.1)
+Requirement already satisfied: ml-dtypes in c:\python311\lib\site-packages (from keras) (0.5.0)
+Requirement already satisfied: packaging in c:\python311\lib\site-packages (from keras) (24.1)
+Requirement already satisfied: scipy>=1.6.0 in c:\tools\manim\lib\site-packages (from scikit-learn>=1.4.2->scikeras==0.13.0) (1.14.0)
+Requirement already satisfied: joblib>=1.2.0 in c:\python311\lib\site-packages (from scikit-learn>=1.4.2->scikeras==0.13.0) (1.4.2)
+Requirement already satisfied: threadpoolctl>=3.1.0 in c:\python311\lib\site-packages (from scikit-learn>=1.4.2->scikeras==0.13.0) (3.5.0)
+Requirement already satisfied: typing-extensions>=4.5.0 in c:\python311\lib\site-packages (from optree->keras) (4.5.0)
+Requirement already satisfied: markdown-it-py>=2.2.0 in c:\tools\manim\lib\site-packages (from rich->keras) (3.0.0)
+Requirement already satisfied: pygments<3.0.0,>=2.13.0 in c:\tools\manim\lib\site-packages (from rich->keras) (2.18.0)
+Requirement already satisfied: mdurl~=0.1 in c:\tools\manim\lib\site-packages (from markdown-it-py>=2.2.0->rich->keras) (0.1.2)
+Using cached scikeras-0.13.0-py3-none-any.whl (26 kB)
+Using cached keras-3.6.0-py3-none-any.whl (1.2 MB)
+Installing collected packages: keras, scikeras
+Successfully installed keras-3.6.0 scikeras-0.13.0

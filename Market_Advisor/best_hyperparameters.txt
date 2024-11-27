@@ -1,0 +1,572 @@
+
+--- Best Hyperparameters Round (2024-11-27 11:06:53) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.0
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.1
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.2
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 11:10:54) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.0
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.1
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.2
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:35:24) ---
+Rank 1:
+  Analysis Level: 0
+  Threshold: 0.0
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 185.68
+  Debt Profit: 185.68
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 0
+  Threshold: 0.1
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 185.68
+  Debt Profit: 185.68
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 0
+  Threshold: 0.2
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 185.68
+  Debt Profit: 185.68
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:40:37) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.0
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.1
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.2
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:40:49) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 115.09
+  Debt Profit: 115.09
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 4600.00
+  Final Capital: 10000.00
+  Profit Vault: 113.01
+  Debt Profit: 113.01
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 5100.00
+  Final Capital: 10000.00
+  Profit Vault: 104.81
+  Debt Profit: 104.81
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:50:46) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.0
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.1
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.2
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:50:59) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 115.09
+  Debt Profit: 115.09
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 4600.00
+  Final Capital: 10000.00
+  Profit Vault: 113.01
+  Debt Profit: 113.01
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 5100.00
+  Final Capital: 10000.00
+  Profit Vault: 104.81
+  Debt Profit: 104.81
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:51:11) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.0
+  Risk Amount: 4600.00
+  Final Capital: 10000.00
+  Profit Vault: 266.13
+  Debt Profit: 266.13
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.1
+  Risk Amount: 4600.00
+  Final Capital: 10000.00
+  Profit Vault: 266.13
+  Debt Profit: 266.13
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.2
+  Risk Amount: 4600.00
+  Final Capital: 10000.00
+  Profit Vault: 266.13
+  Debt Profit: 266.13
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:51:24) ---
+Rank 1:
+  Analysis Level: 0
+  Threshold: 0.0
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 185.68
+  Debt Profit: 185.68
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 0
+  Threshold: 0.1
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 185.68
+  Debt Profit: 185.68
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 0
+  Threshold: 0.2
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 185.68
+  Debt Profit: 185.68
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:54:26) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.0
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.1
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.2
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:54:41) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 115.09
+  Debt Profit: 115.09
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 4600.00
+  Final Capital: 10000.00
+  Profit Vault: 113.01
+  Debt Profit: 113.01
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 5100.00
+  Final Capital: 10000.00
+  Profit Vault: 104.81
+  Debt Profit: 104.81
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:55:17) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.0
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.1
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.2
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 244.67
+  Debt Profit: 244.67
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:55:29) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 115.09
+  Debt Profit: 115.09
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 4600.00
+  Final Capital: 10000.00
+  Profit Vault: 113.01
+  Debt Profit: 113.01
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 5100.00
+  Final Capital: 10000.00
+  Profit Vault: 104.81
+  Debt Profit: 104.81
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:55:41) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.0
+  Risk Amount: 4600.00
+  Final Capital: 10000.00
+  Profit Vault: 266.13
+  Debt Profit: 266.13
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.1
+  Risk Amount: 4600.00
+  Final Capital: 10000.00
+  Profit Vault: 266.13
+  Debt Profit: 266.13
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.2
+  Risk Amount: 4600.00
+  Final Capital: 10000.00
+  Profit Vault: 266.13
+  Debt Profit: 266.13
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 13:55:58) ---
+Rank 1:
+  Analysis Level: 0
+  Threshold: 0.0
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 185.68
+  Debt Profit: 185.68
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 0
+  Threshold: 0.1
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 185.68
+  Debt Profit: 185.68
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 0
+  Threshold: 0.2
+  Risk Amount: 5600.00
+  Final Capital: 10000.00
+  Profit Vault: 185.68
+  Debt Profit: 185.68
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 14:02:39) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.0
+  Risk Amount: 28000.00
+  Final Capital: 50000.00
+  Profit Vault: 1223.37
+  Debt Profit: 1223.37
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.1
+  Risk Amount: 28000.00
+  Final Capital: 50000.00
+  Profit Vault: 1223.37
+  Debt Profit: 1223.37
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.2
+  Risk Amount: 28000.00
+  Final Capital: 50000.00
+  Profit Vault: 1223.37
+  Debt Profit: 1223.37
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 14:02:50) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 28000.00
+  Final Capital: 50000.00
+  Profit Vault: 575.45
+  Debt Profit: 575.45
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 23000.00
+  Final Capital: 50000.00
+  Profit Vault: 565.05
+  Debt Profit: 565.05
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.5
+  Risk Amount: 25500.00
+  Final Capital: 50000.00
+  Profit Vault: 524.07
+  Debt Profit: 524.07
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 14:03:00) ---
+Rank 1:
+  Analysis Level: 3
+  Threshold: 0.0
+  Risk Amount: 23000.00
+  Final Capital: 50000.00
+  Profit Vault: 1330.67
+  Debt Profit: 1330.67
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 3
+  Threshold: 0.1
+  Risk Amount: 23000.00
+  Final Capital: 50000.00
+  Profit Vault: 1330.67
+  Debt Profit: 1330.67
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 3
+  Threshold: 0.2
+  Risk Amount: 23000.00
+  Final Capital: 50000.00
+  Profit Vault: 1330.67
+  Debt Profit: 1330.67
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 14:03:13) ---
+Rank 1:
+  Analysis Level: 0
+  Threshold: 0.0
+  Risk Amount: 28000.00
+  Final Capital: 50000.00
+  Profit Vault: 928.40
+  Debt Profit: 928.40
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 0
+  Threshold: 0.1
+  Risk Amount: 28000.00
+  Final Capital: 50000.00
+  Profit Vault: 928.40
+  Debt Profit: 928.40
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 0
+  Threshold: 0.2
+  Risk Amount: 28000.00
+  Final Capital: 50000.00
+  Profit Vault: 928.40
+  Debt Profit: 928.40
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 14:03:16) ---
+Rank 1:
+  Analysis Level: 2
+  Threshold: 0.0
+  Risk Amount: 500.00
+  Final Capital: 50000.00
+  Profit Vault: 0.00
+  Debt Profit: 0.00
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 2
+  Threshold: 0.0
+  Risk Amount: 3000.00
+  Final Capital: 50000.00
+  Profit Vault: 0.00
+  Debt Profit: 0.00
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 2
+  Threshold: 0.0
+  Risk Amount: 5500.00
+  Final Capital: 50000.00
+  Profit Vault: 0.00
+  Debt Profit: 0.00
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 14:03:19) ---
+Rank 1:
+  Analysis Level: 0
+  Threshold: 0.0
+  Risk Amount: 500.00
+  Final Capital: 50000.00
+  Profit Vault: 0.00
+  Debt Profit: 0.00
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 0
+  Threshold: 0.0
+  Risk Amount: 3000.00
+  Final Capital: 50000.00
+  Profit Vault: 0.00
+  Debt Profit: 0.00
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 0
+  Threshold: 0.0
+  Risk Amount: 5500.00
+  Final Capital: 50000.00
+  Profit Vault: 0.00
+  Debt Profit: 0.00
+--------------------------------------------------
+
+--- Best Hyperparameters Round (2024-11-27 14:08:21) ---
+Rank 1:
+  Analysis Level: 0
+  Threshold: 0.0
+  Risk Amount: 28000.00
+  Final Capital: 50000.00
+  Profit Vault: 928.40
+  Debt Profit: 928.40
+--------------------------------------------------
+Rank 2:
+  Analysis Level: 0
+  Threshold: 0.1
+  Risk Amount: 28000.00
+  Final Capital: 50000.00
+  Profit Vault: 928.40
+  Debt Profit: 928.40
+--------------------------------------------------
+Rank 3:
+  Analysis Level: 0
+  Threshold: 0.2
+  Risk Amount: 28000.00
+  Final Capital: 50000.00
+  Profit Vault: 928.40
+  Debt Profit: 928.40
+--------------------------------------------------
