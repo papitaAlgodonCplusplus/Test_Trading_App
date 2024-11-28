@@ -1,11 +1,14 @@
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.subplots as sp
 from ta.momentum import RSIIndicator
 from market_predicter import obtain_final_predictions
 from itertools import product
 from datetime import datetime
-import os
+import time
+import numpy as np
+import threading
+from plotter import Plotter
 
 def calculate_indicators(data):
     """Calculate technical indicators."""
@@ -92,12 +95,13 @@ def define_actions(data, probabilities, threshold=0.5, analysis_level=0, zigzag=
         data['Action'] = data['Action'].where(data['Action'] != data['Action'].shift(), 'Hold')
         return data
 
-def run_simulation(data, initial_capital=10000, reverse=False, risk_amount=None, expected_profit=None):
+def run_simulation(data, initial_capital=10000, reverse=False, risk_amount=None, expected_profit=None, log=False):
     """Run a trading simulation."""
     capital, units_hold, profit_vault = initial_capital, 0, 0
     profit_over_time = []
+    vault_values = []
 
-    for _, row in data.iterrows():
+    for i, row in data.iterrows():
         action, price = row['Action'], row['Close']
         if reverse:
             action = 'Buy' if action == 'Sell' else 'Sell' if action == 'Buy' else 'Hold'
@@ -106,71 +110,72 @@ def run_simulation(data, initial_capital=10000, reverse=False, risk_amount=None,
             invest = min(risk_amount or capital, capital)
             units_hold = invest / price
             capital -= invest
+            data.loc[i, 'Action'] = 'Buy'
         elif action == 'Sell' and units_hold > 0:
             capital += units_hold * price
             units_hold = 0
+            data.loc[i, 'Action'] = 'Sell'
+        else:
+            data.loc[i, 'Action'] = 'Hold'
 
         profit_over_time.append(capital - initial_capital)
+        if log:
+           print(f"Date: {row['Date']}, Capital: {capital:.2f}, Units: {units_hold:.2f}, Profit: {profit_over_time[-1]:.2f}, Action: {action}, Price: {price:.2f}")
+
         if profit_over_time[-1] > 0:
             profit_vault += profit_over_time[-1]
             capital = initial_capital
+
+        vault_values.append(profit_vault)    
 
         if expected_profit and profit_vault >= expected_profit:
             capital += units_hold * price
             units_hold = 0
             return data, capital, profit_vault
 
-    data['Profit'] = profit_over_time
     if units_hold > 0:
         capital += units_hold * data['Close'].iloc[-1]
+        profit_over_time[-1] = capital - initial_capital
 
+    data['Profit'] = profit_over_time
+    data['Vault'] = vault_values
     return data, capital, profit_vault
 
-def plot_results(data, predictions, title_suffix, reverse=False):
-    """Plot trading results and predictions."""
-    plt.figure(figsize=(14, 10))
-    plt.subplot(3, 1, 1)
-    plt.plot(data['Date'], data['Close'], label='Close Price', alpha=0.7)
-    action_colors = {'Buy': 'red', 'Sell': 'green'} if not reverse else {'Buy': 'green', 'Sell': 'red'}
-    for action, color in action_colors.items():
-        plt.scatter(data['Date'][data['Action'] == action], data['Close'][data['Action'] == action], label=action, color=color, s=50)
-    plt.title(f'Price Action with Trading Signals ({title_suffix})')
-    plt.legend()
-
-    plt.subplot(3, 1, 2)
-    plt.plot(data['Date'], data['Profit'], label='Profit', color='blue')
-    plt.title('Profit Over Time')
-    plt.legend()
-
-    plt.subplot(3, 1, 3)
-    plt.plot(data['Date'], data['Close'], label='Close Price', alpha=0.3)
-    plt.scatter(data['Date'][predictions == 1], data['Close'][predictions == 1], label='Predicted Growth', color='purple', s=50)
-    plt.scatter(data['Date'][predictions == 0], data['Close'][predictions == 0], label='Predicted Fall', color='orange', s=50)
-    plt.title('Trend Prediction')
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-def main(file_path, reverse=False):
+def main_logic(file_path, plotter, reverse=False, multiply_factor = None, expected_profit=1):
     """Run the trading simulation."""
     data = pd.read_csv(file_path, parse_dates=['Date'])
+
+    print(f"\033[95m --- Obtained New Data ---\033[0m")
+    print(f"\033[95mLast date in dataset: {data['Date'].iloc[-1]}\033[0m")
+    print(f"\033[95m -------------------------\033[0m")
+
+    if multiply_factor is not None:
+        data['Close'] = data['Close'] * multiply_factor
+        data['High'] = data['High'] * multiply_factor
+        data['Low'] = data['Low'] * multiply_factor
+        data['Open'] = data['Open'] * multiply_factor
+        
     calculate_indicators(data)
 
     predictions, probabilities = obtain_final_predictions(file_path)
     if reverse:
         predictions = 1 - predictions
+        
+    if len(predictions) < len(data):
+        predictions = np.pad(predictions, (0, len(data) - len(predictions)), constant_values=3)
 
-    data = data.iloc[:len(predictions)]
-    probabilities = probabilities[:len(data)]
+    if len(probabilities) < len(data):
+        probabilities = np.pad(probabilities, (0, len(data) - len(probabilities)), constant_values=3)
+
     results = []
     analysis_levels = [0, 1, 2, 3, 4]
     threshold_options = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
-    initial_capital = 50000
-    risk_options = [(initial_capital * 0.01) * i for i in range(1, 60, 5)]
+    initial_capital = 50000 if multiply_factor is None else 50000 * multiply_factor
+    risk_options = [(initial_capital * 0.01) * i for i in range(1, 80, 5)]
 
     for level, threshold, risk_amount in product(analysis_levels, threshold_options, risk_options):
         define_actions(data, probabilities, threshold, level, True)
-        data, capital, profit_vault = run_simulation(data, initial_capital, reverse, risk_amount, expected_profit=initial_capital * 0.01)
+        data, capital, profit_vault = run_simulation(data, initial_capital, reverse, risk_amount, expected_profit=expected_profit)
         debt_profit = profit_vault - abs(capital - initial_capital)
         results.append({
             "level": level,
@@ -190,7 +195,7 @@ def main(file_path, reverse=False):
         print(f"\033[92mDebt Profit: {result['debt_profit']:.2f}\033[0m")  
         print("-" * 50)
         current_iteration += 1
-
+           
         if result['debt_profit'] <= 0 or current_iteration >= 3:
             break
 
@@ -211,15 +216,64 @@ def main(file_path, reverse=False):
 
     print(f"Best hyperparameters saved to {output_file}")
 
-if __name__ == '__main__':
-    # Set current directory to the path of the script
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    print(f"\033[91m --- Obtained New Data ---\033[0m")
+    print(f"\033[91mLast date in dataset: {data['Date'].iloc[-1]}\033[0m")
+    print(f"\033[91m -------------------------\033[0m")
 
-    # data_paths = ['data/USD_EUR_2020-2021.csv', 'data/USD_EUR_2021-2022.csv', 'data/USD_EUR-2022-2023.csv', 'data/USD_EUR_2023-2024.csv', 'data/USD_EUR-Month_1.csv', 'data/USD_EUR-Month_2.csv']
-    data_paths = ['data/USD_EUR-2_Months.csv']
-    for data_path in data_paths:
-        print("♥ - " * 25)
-        print("\033[95m Running simulation for", data_path, "\033[0m")
-        print("♥ - " * 25)
-        main(data_path, reverse=False)
-    # main('data.csv', reverse=True)
+
+    result = best_results[0]
+    predictions, probabilities = obtain_final_predictions(file_path)
+    
+    if len(predictions) < len(data):
+        predictions = np.pad(predictions, (0, len(data) - len(predictions)), constant_values=3)
+
+    if len(probabilities) < len(data):
+        probabilities = np.pad(probabilities, (0, len(data) - len(probabilities)), constant_values=3)
+
+    define_actions(data, probabilities, result['threshold'], result['level'], True)
+    data, capital, profit_vault = run_simulation(data, initial_capital, reverse, result['risk_amount'], expected_profit=None, log=False)
+    data['Profit'] = data['Profit'].fillna(0)
+
+    for row in data.itertuples():
+        # Print colored
+        if row.Action == 'Buy':
+            print(f"\033[91m{row.Date}: {row.Action} at {row.Close:.2f}\033[0m")
+        elif row.Action == 'Sell':
+            print(f"\033[92m{row.Date}: {row.Action} at {row.Close:.2f}\033[0m")
+
+    # Update plotter
+    plotter.data = data
+    plotter.predictions = predictions
+    plotter.title_suffix = "Real-Time Simulation"
+    plotter.update_figure()
+
+def schedule_main(file_path, plotter):
+    """Run the main function every 60 seconds."""
+    while True:
+        try:
+            main_logic(file_path, plotter, reverse=True)
+            print(f"Updated at {datetime.now()}")
+        except Exception as e:
+            print(f"Error occurred: {e}")
+        time.sleep(60)
+
+import traceback
+
+if __name__ == "__main__":
+    try:
+        real_time_csv = "real_time_data.csv"
+        plotter = Plotter()
+        plotter.start()  # Start the Dash app in a separate thread
+
+        # Run the main function in a loop
+        scheduler_thread = threading.Thread(target=schedule_main, args=(real_time_csv, plotter))
+        scheduler_thread.daemon = True
+        scheduler_thread.start()
+
+        # Keep the main thread alive
+        while True:
+            time.sleep(50)
+
+    except Exception as e:
+        print("An error occurred:")
+        traceback.print_exc()
