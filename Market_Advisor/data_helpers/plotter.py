@@ -2,7 +2,6 @@ from dash import Dash, dcc, html, Output, Input
 import plotly.graph_objects as go
 import plotly.subplots as sp
 import threading
-import time
 
 class Plotter:
     def __init__(self):

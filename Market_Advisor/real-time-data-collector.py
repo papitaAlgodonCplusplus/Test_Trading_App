@@ -24,7 +24,7 @@ def fetch_data_with_chrome(file_name):
     chrome_options.add_argument("--disable-dev-shm-usage")
 
     # Path to ChromeDriver
-    service = Service("C:/Users/Alex/Desktop/forex/Deep-Reinforcement-Stock-Trading/Market_Advisor/chromedriver.exe")    
+    service = Service("chromedriver.exe")    
     driver = webdriver.Chrome(service=service, options=chrome_options)
 
     try:
@@ -81,7 +81,7 @@ def fetch_data_with_chrome(file_name):
         driver.quit()  # Ensure the browser is closed
 
 def main():
-    file_name = "real_time_data.csv"
+    file_name = "data/real_time_data.csv"
     initialize_csv(file_name)
 
     while True:
