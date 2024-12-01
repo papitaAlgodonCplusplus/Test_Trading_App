@@ -2,6 +2,8 @@ from dash import Dash, dcc, html, Output, Input
 import plotly.graph_objects as go
 import plotly.subplots as sp
 import threading
+import logging
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 class Plotter:
     def __init__(self):
@@ -25,7 +27,6 @@ class Plotter:
         )(self.update_figure)
 
     def update_figure(self, n_intervals):
-        print(f"Updating figure at interval {n_intervals}...")
         if self.data is not None and self.predictions is not None:
             # Create subplots: 3 rows, 1 column
             fig = sp.make_subplots(
@@ -119,7 +120,6 @@ class Plotter:
                 hovermode="x unified"
             )
 
-            print("Figure updated.")
             return fig
         return self.figure
 

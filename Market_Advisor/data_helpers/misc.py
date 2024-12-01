@@ -2,11 +2,62 @@ import pandas as pd
 from analyzers.market_predicter import obtain_final_predictions
 from datetime import datetime
 import numpy as np
-from itertools import product
-from analyzers.actions import define_actions
-from analyzers.simulator import run_simulation
 from termcolor import colored
-from tqdm import tqdm
+
+def read_last_written_row(file_path="last_row.txt"):
+    """Read the last written row from a file."""
+    try:
+        with open(file_path, "r") as file:
+            return int(file.read().strip())  # Read and convert to integer
+    except (FileNotFoundError, ValueError):
+        return 0  # Default to 0 if the file doesn't exist or is empty
+    
+def read_actions_from_file(file_path):
+    """Read actions from a file and return as a DataFrame."""
+    try:
+        with open(file_path, "r") as file:
+            lines = file.readlines()
+
+        actions = []
+        for line in lines:
+            # Safely split the line into Timestamp and Action
+            parts = line.strip().split(": ", 1)  # Split on the first ": "
+            if len(parts) == 2:
+                timestamp, action = parts
+                actions.append({"Timestamp": timestamp, "Action": action})
+            else:
+                print(f"Skipping malformed line: {line.strip()}")
+
+        # Convert to DataFrame
+        actions_df = pd.DataFrame(actions)
+        if not actions_df.empty:
+            actions_df["Timestamp"] = pd.to_datetime(actions_df["Timestamp"], errors="coerce")  # Convert to datetime
+            actions_df.dropna(subset=["Timestamp"], inplace=True)  # Drop rows with invalid timestamps
+            actions_df.set_index("Timestamp", inplace=True)  # Set Timestamp as the index
+        else:
+            print("No valid data found in the file.")
+            return None
+
+        return actions_df
+
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+        return None
+    except Exception as e:
+        print(f"Error reading actions from file: {e}")
+        return None
+
+def write_last_written_row(last_written_row, file_path="last_row.txt"):
+    """Write the last written row to a file."""
+    with open(file_path, "w") as file:
+        file.write(str(last_written_row))
+
+def write_actions_to_file(data, file_path="actions.txt"):
+    """Write actions to a file."""
+    with open(file_path, "w") as file:
+        for row in data.itertuples():
+            formatted_date = row.Date.isoformat() if isinstance(row.Date, pd.Timestamp) else str(row.Date)
+            file.write(f"{formatted_date}: {row.Action}\n")
 
 def print_colored_sentence(sentence):
     colors = ['red', 'yellow', 'green', 'cyan', 'blue', 'magenta']
@@ -16,36 +67,24 @@ def print_colored_sentence(sentence):
         print(colored(word, color), end=" ")
     print()
 
-def process_simulation_window(data, probabilities, analysis_levels, threshold_options, risk_options,
-                              initial_capital, reverse, expected_profit, context_window, output_file, file_path):
-    """Process a single simulation window."""
-    sorted_results = process_simulation(data, probabilities, analysis_levels, threshold_options, risk_options,
-                                        initial_capital, reverse, expected_profit, context_window)
-    print_results(sorted_results)
-
-    # Process best results
-    best_results = sorted_results[:3]
-    result = best_results[0]
-    predictions, probabilities = obtain_final_predictions(file_path)
-    predictions, probabilities = pad_predictions_and_probabilities(predictions, probabilities, len(data))
-
-    define_actions(data, probabilities, result['threshold'], result['level'], True, context_window=context_window)
-    data, _, _ = run_simulation(data, initial_capital, reverse, result['risk_amount'], expected_profit=None, log=False)
-    data['Profit'] = data['Profit'].fillna(0)
-
-    print_actions(data)
-    write_to_file(output_file, best_results)
-    return data, predictions, probabilities
-
 def pad_vault(data):
+    data.reset_index(drop=True, inplace=True)
+    data.fillna(0, inplace=True) 
+    if 'Vault' not in data.columns:
+        data['Vault'] = 0
+    if 'Profit' not in data.columns:
+        data['Profit'] = 0
     best_vault = max(data.loc[0, 'Vault'], data.loc[0, 'Profit'])
     for i in range(0, len(data)):
-        print_colored_sentence(f"Date: {data.loc[i, 'Date']}, Vault: {data.loc[i, 'Vault']}, Profit: {data.loc[i, 'Profit']}, Best Vault: {best_vault}")
         if data.loc[i, 'Profit'] > 0:
             best_vault += data.loc[i, 'Profit']
             data.loc[i, 'Vault'] = best_vault
         if data.loc[i, 'Vault'] < best_vault:
             data.loc[i, 'Vault'] = best_vault
+        if data.loc[i, 'Profit'] > data.loc[max(0, i-1), 'Profit']:
+            data.loc[i, 'Action'] = 'Sell'
+        if data.loc[i, 'Profit'] < data.loc[max(0, i-1), 'Profit'] and data.loc[i, 'Profit'] < 0:
+            data.loc[i, 'Action'] = 'Buy'
 
 def pad_predictions_and_probabilities(predictions, probabilities, target_length):
     """Ensure predictions and probabilities are of the same length as target."""
@@ -54,30 +93,6 @@ def pad_predictions_and_probabilities(predictions, probabilities, target_length)
     if len(probabilities) < target_length:
         probabilities = np.pad(probabilities, (0, target_length - len(probabilities)), constant_values=3)
     return predictions, probabilities
-
-
-def process_simulation(data, probabilities, analysis_levels, threshold_options, risk_options, initial_capital, reverse, expected_profit, context_window):
-    """Run simulations for all parameter combinations and return sorted results."""
-    results = []
-    total_combinations = len(analysis_levels) * len(threshold_options) * len(risk_options)
-    
-    with tqdm(total=total_combinations, desc="Running simulations") as pbar:
-        for level, threshold, risk_amount in product(analysis_levels, threshold_options, risk_options):
-            define_actions(data, probabilities, threshold, level, True, context_window=context_window)
-            data, capital, profit_vault = run_simulation(data, initial_capital, reverse, risk_amount, expected_profit=expected_profit)
-            debt_profit = profit_vault - abs(capital - initial_capital)
-            results.append({
-                "level": level,
-                "threshold": threshold,
-                "risk_amount": risk_amount,
-                "final_capital": capital,
-                "profit_vault": profit_vault,
-                "debt_profit": debt_profit
-            })
-            pbar.update(1)
-    
-    return sorted(results, key=lambda x: x["debt_profit"], reverse=True)
-
 
 def update_simulation_data(data, data_for_simulation):
     """Update main data with the simulation results."""
@@ -107,7 +122,6 @@ def print_actions(data):
             print(f"\033[91m{row.Date}: {row.Action} at {row.Close:.2f}\033[0m")
         elif row.Action == 'Sell':
             print(f"\033[92m{row.Date}: {row.Action} at {row.Close:.2f}\033[0m")
-
             
 def write_to_file(output_file, best_results):
     with open(output_file, 'a') as f:
@@ -124,7 +138,11 @@ def write_to_file(output_file, best_results):
 
     print(f"Best hyperparameters saved to {output_file}")
 
-def load_data(file_path, reverse=False, multiply_factor=None):
+def calculate_data_length(file_path):
+    data = pd.read_csv(file_path)
+    return len(data)
+
+def load_data(file_path, reverse=False, initial_capital=50000, multiply_factor=None):
     data = pd.read_csv(file_path, parse_dates=['Date'])
 
     print(f"\033[95m --- Obtained New Data ---\033[0m")
@@ -148,11 +166,11 @@ def load_data(file_path, reverse=False, multiply_factor=None):
         probabilities = np.pad(probabilities, (0, len(data) - len(probabilities)), constant_values=3)
 
     results = []
-    analysis_levels = [0, 1, 2, 3, 4]
+    analysis_levels = [0, 1, 2, 3, 4] #, 5
     threshold_options = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
-    initial_capital = 50000 if multiply_factor is None else 50000 * multiply_factor
-    risk_options = [(initial_capital * 0.01) * i for i in range(1, 80, 5)]
+    # risk_options = [(initial_capital * 0.01) * i for i in range(1, 100, 5)]
+    risk_options = [initial_capital * 0.95]
 
     output_file = "best_hyperparameters.txt"
 
-    return data, predictions, probabilities, results, analysis_levels, threshold_options, risk_options, initial_capital, output_file
+    return data, predictions, probabilities, results, analysis_levels, threshold_options, risk_options, 0, output_file
