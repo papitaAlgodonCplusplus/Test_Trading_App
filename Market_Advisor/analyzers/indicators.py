@@ -54,7 +54,6 @@ def calculate_indicators(data, context_window=None):
     ]:
         data.loc[data_backup.index, column] = data_backup[column]
 
-    data.loc[:, 'Action'] = 'Hold'
     return data
 
 def get_conditions(data, level):
@@ -76,7 +75,13 @@ def get_conditions(data, level):
     if level >= 4:
         bullish &= (data['Close'] <= data['BB_Lower']) & (data['RSI'] < 70)
         bearish &= (data['Close'] >= data['BB_Upper']) & (data['RSI'] > 30)
-        volatility_threshold = data['ATR'].mean() * 0.5  # Example: 50% of the mean ATR
+        volatility_threshold = data['ATR'].mean() * 0.5
+        bullish |= (data['ATR'] > volatility_threshold) & (data['ATR'] < 2 * volatility_threshold)
+        bearish |= (data['ATR'] > volatility_threshold) & (data['ATR'] < 2 * volatility_threshold)
+    if level >= 5:
+        bullish |= (data['Close'] <= data['BB_Lower']) & (data['RSI'] < 70)
+        bearish |= (data['Close'] >= data['BB_Upper']) & (data['RSI'] > 30)
+        volatility_threshold = data['ATR'].mean() * 0.5
         bullish &= (data['ATR'] > volatility_threshold) & (data['ATR'] < 2 * volatility_threshold)
         bearish &= (data['ATR'] > volatility_threshold) & (data['ATR'] < 2 * volatility_threshold)
 
