@@ -10,6 +10,7 @@ def calculate_indicators(data, context_window=None):
         except Exception as e:
             print(f"Error occurred while calculating indicators: {e}")
 
+    # Existing indicators
     data_backup['SMA_20'] = data_backup['Close'].rolling(window=20).mean()
     data_backup['EMA_12'] = data_backup['Close'].ewm(span=12, adjust=False).mean()
     data_backup['EMA_26'] = data_backup['Close'].ewm(span=26, adjust=False).mean()
@@ -19,6 +20,7 @@ def calculate_indicators(data, context_window=None):
     data_backup['High_Liquidity'] = data_backup['High'].rolling(window=5).max()
     data_backup['Low_Liquidity'] = data_backup['Low'].rolling(window=5).min()
 
+    # True Range and ATR
     data_backup['Prev_Close'] = data_backup['Close'].shift(1)
     data_backup['True_Range'] = data_backup[['High', 'Low', 'Prev_Close']].apply(
         lambda row: max(
@@ -28,19 +30,12 @@ def calculate_indicators(data, context_window=None):
         ),
         axis=1
     )
-
     rolling_window = 14
-    rolling_min = data_backup['True_Range'].rolling(window=rolling_window).min()
-    rolling_max = data_backup['True_Range'].rolling(window=rolling_window).max()
-    data_backup['Liquidity_Pool'] = (data_backup['True_Range'] - rolling_min) / (rolling_max - rolling_min)
-    data_backup['Liquidity_Pool'] = data_backup['Liquidity_Pool'].fillna(0)
+    data_backup['ATR'] = data_backup['True_Range'].rolling(window=rolling_window).mean()
 
     # Bollinger Bands
     data_backup['BB_Upper'] = data_backup['SMA_20'] + 2 * data_backup['Close'].rolling(window=20).std()
     data_backup['BB_Lower'] = data_backup['SMA_20'] - 2 * data_backup['Close'].rolling(window=20).std()
-
-    # Average True Range
-    data_backup['ATR'] = data_backup['True_Range'].rolling(window=rolling_window).mean()
 
     # Order Block Validity
     data_backup['Order_Block_Valid'] = (
@@ -49,8 +44,8 @@ def calculate_indicators(data, context_window=None):
 
     for column in [
         'SMA_20', 'EMA_12', 'EMA_26', 'MACD', 'Signal_Line', 'RSI',
-        'High_Liquidity', 'Low_Liquidity', 'True_Range', 'Liquidity_Pool',
-        'BB_Upper', 'BB_Lower', 'ATR', 'Order_Block_Valid'
+        'High_Liquidity', 'Low_Liquidity', 'True_Range', 'ATR',
+        'BB_Upper', 'BB_Lower', 'Order_Block_Valid'
     ]:
         data.loc[data_backup.index, column] = data_backup[column]
 
@@ -69,15 +64,16 @@ def get_conditions(data, level):
         bullish &= (data['Close'] > data['SMA_20'])
         bearish &= (data['Close'] < data['SMA_20'])
     if level >= 3:
-        bullish &= (data['Liquidity_Pool'] > 0.5)
-        bearish &= (data['Liquidity_Pool'] < 0.5)
-        bullish |= data['Order_Block_Valid'] & (data['Close'] > data['Low'].shift(1))
-        bearish |= data['Order_Block_Valid'] & (data['Close'] < data['High'].shift(1))
+        bullish &= (data['RSI'] < 30)
+        bearish &= (data['RSI'] > 70)
     if level >= 4:
-        bullish &= (data['Close'] <= data['BB_Lower']) & (data['RSI'] < 70)
-        bearish &= (data['Close'] >= data['BB_Upper']) & (data['RSI'] > 30)
-        volatility_threshold = data['ATR'].mean() * 0.5  # Example: 50% of the mean ATR
+        bullish &= (data['Close'] <= data['BB_Lower'])
+        bearish &= (data['Close'] >= data['BB_Upper'])
+        volatility_threshold = data['ATR'].mean() * 0.5
         bullish &= (data['ATR'] > volatility_threshold) & (data['ATR'] < 2 * volatility_threshold)
         bearish &= (data['ATR'] > volatility_threshold) & (data['ATR'] < 2 * volatility_threshold)
 
-    return bullish, bearish
+    sell_short = (data['RSI'] > 70)
+    buy_to_cover = (data['RSI'] < 30)
+
+    return bullish, bearish, sell_short, buy_to_cover

@@ -32,7 +32,7 @@ def fetch_data_with_chrome(file_name):
         driver.get(url)
 
         # Wait for the page to load (increase time if necessary)
-        time.sleep(5)
+        time.sleep(2)
 
         # Locate the div containing values
         values_wrapper = driver.find_element(By.CLASS_NAME, "valuesAdditionalWrapper-l31H9iuA")
@@ -87,8 +87,8 @@ def main():
     while True:
         print("Fetching data...")
         fetch_data_with_chrome(file_name)
-        print("Waiting for 1 minute...\n")
-        time.sleep(60)
+        print("Waiting for 3 seconds...\n")
+        time.sleep(3)
 
 if __name__ == "__main__":
     main()
