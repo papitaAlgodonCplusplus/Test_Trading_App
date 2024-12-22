@@ -83,18 +83,19 @@ def has_consecutive_holds(actions):
 
 def process_simulation(data, probabilities, analysis_levels, threshold_options, risk_options, 
                        patience_options, take_profit_options, stop_loss_options,
-                       initial_capital, reverse, expected_profit, context_window, cemented_data=None, use_analyzer=True):
+                       initial_capital, reverse, expected_profit, context_window, cemented_data=None, use_analyzer=True, stop_loss_pips=5, take_profit_pips=5, pip_value=0.0001, target_rr_ratio=2):
     """Run simulations for all parameter combinations and return sorted results."""
     results = []
     total_combinations = len(analysis_levels) * len(threshold_options) * len(risk_options) * len(patience_options) * len(take_profit_options) * len(stop_loss_options)
     with tqdm(total=total_combinations, desc="Running simulations") as pbar:
         for level, threshold, risk_amount, patience, take_profit, stop_loss in product(analysis_levels, threshold_options, risk_options, patience_options, take_profit_options, stop_loss_options):
-            define_actions(data, probabilities, threshold, level, True, context_window=None, patience=patience, take_profit=take_profit, stop_loss=stop_loss)
+            define_actions(data, probabilities, threshold, level, True, context_window=None, patience=patience, take_profit=take_profit, stop_loss=stop_loss, reverse=reverse)
             len_diff = 0
             if use_analyzer:
                 define_actions_extended(data, cemented_data=cemented_data)
             
-            data, capital = run_simulation(data, initial_capital, reverse, risk_amount, expected_profit=expected_profit, risk_percentage=stop_loss)
+            data, capital = run_simulation(data, initial_capital, reverse, risk_amount, expected_profit=expected_profit, risk_percentage=stop_loss, stop_loss_pips=stop_loss_pips, take_profit_pips=take_profit_pips, pip_value=0.0001,
+                                           target_rr_ratio=target_rr_ratio)
             debt_profit = data['Profit'].sum()
             results.append({
                 "level": level,
@@ -115,12 +116,14 @@ def process_simulation(data, probabilities, analysis_levels, threshold_options, 
 
 def process_simulation_window(data, probabilities, analysis_levels, threshold_options, risk_options,
                               patience_options, take_profit_options, stop_loss_options,
-                              initial_capital, reverse, expected_profit, output_file, file_path, cemented_data=None, use_analyzer=True, real_time=True):
+                              initial_capital, reverse, expected_profit, output_file, file_path, cemented_data=None, use_analyzer=True, real_time=True, stop_loss_pips=5, take_profit_pips=5, pip_value=0.0001,
+                              target_rr_ratio=2):
     """Process a single simulation window."""
     sorted_results = None
     if not real_time:
         sorted_results = process_simulation(data, probabilities, analysis_levels, threshold_options, risk_options, patience_options, take_profit_options, stop_loss_options,
-                                            initial_capital, reverse, expected_profit, context_window=None, cemented_data=cemented_data, use_analyzer=use_analyzer)
+                                            initial_capital, reverse, expected_profit, context_window=None, cemented_data=cemented_data, use_analyzer=use_analyzer, stop_loss_pips=stop_loss_pips, take_profit_pips=take_profit_pips, pip_value=0.0001,
+                                            target_rr_ratio=target_rr_ratio)
     else:
         sorted_results = []
         sorted_results.append({
@@ -134,7 +137,7 @@ def process_simulation_window(data, probabilities, analysis_levels, threshold_op
                 "stop_loss": stop_loss_options[0]
             })
     
-    print_results(sorted_results)
+    # print_results(sorted_results)
     best_results = sorted_results[:3]
     result = best_results[0]
 
@@ -145,13 +148,25 @@ def process_simulation_window(data, probabilities, analysis_levels, threshold_op
         predictions, probabilities = pad_predictions_and_probabilities(predictions, probabilities, len(data))
 
     define_actions(data, probabilities, result['threshold'], result['level'], True, context_window=None, patience=result['patience'], take_profit=result['take_profit'],
-                   stop_loss=result['stop_loss'])
+                   stop_loss=result['stop_loss'], reverse=reverse)
 
     if use_analyzer:
         define_actions_extended(data, cemented_data=cemented_data)
+    
+    if reverse:
+        for index, row in data.iterrows():
+            if row['Action'] == 'Buy':
+                data.loc[index, 'Action'] = 'Sell Short'
+            elif row['Action'] == 'Sell Short':
+                data.loc[index, 'Action'] = 'Buy'
+            elif row['Action'] == 'Sell':
+                data.loc[index, 'Action'] = 'Buy to Cover'
+            elif row['Action'] == 'Buy to Cover':
+                data.loc[index, 'Action'] = 'Sell'
         
-    data, _ = run_simulation(data, initial_capital, reverse, result['risk_amount'], expected_profit=None, log=False, risk_percentage=result['stop_loss'])
+    data, _ = run_simulation(data, initial_capital, reverse, result['risk_amount'], expected_profit=None, log=False, risk_percentage=result['stop_loss'], stop_loss_pips=stop_loss_pips, take_profit_pips=take_profit_pips, pip_value=0.0001,
+                             target_rr_ratio=target_rr_ratio)
     data['Profit'] = data['Profit'].fillna(0)
-    print_actions(data)
+    # print_actions(data)
     #   write_to_file(output_file, best_results)
     return data, predictions, probabilities

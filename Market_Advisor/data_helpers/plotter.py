@@ -34,7 +34,7 @@ class Plotter:
                 rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.1,
                 subplot_titles=(
                     f"Price Action with Trading Signals ({self.title_suffix})",
-                    "Profit and Vault Over Time",
+                    "Profit Over Time",
                     "Predicted Trends (Growth/Fall)"
                 )
             )
@@ -90,23 +90,6 @@ class Plotter:
                     name=action_labels[list(action_colors.keys()).index(action)],
                     marker=dict(color=color, size=10),
                 ), row=1, col=1)
-
-            # Subplot 2: Profit and Vault
-            fig.add_trace(go.Scatter(
-                x=self.data_backtest['Date'],
-                y=self.data_backtest['Profit'],
-                mode='lines',
-                name='Revenue',
-                line=dict(color='green', width=2)
-            ), row=2, col=1)
-
-            fig.add_trace(go.Scatter(
-                x=self.data_backtest['Date'],
-                y=self.data_backtest['Vault'],
-                mode='lines',
-                name='Vault',
-                line=dict(color='yellow', width=2)
-            ), row=2, col=1)
 
             fig.add_trace(go.Scatter(
                 x=self.data_backtest['Date'],
@@ -165,8 +148,7 @@ class Plotter:
                     title=f"Trading Results and Predictions ({self.title_suffix})",
                     xaxis=dict(title="Date"),
                     yaxis=dict(title="Close Price (Signals)"),
-                    yaxis2=dict(title="Profit and Vault"),
-                    yaxis3=dict(title="Close Price (Predictions)"),
+                    yaxis2=dict(title="Close Price (Predictions)"),
                     legend_title="Actions",
                     template="plotly_white",
                     hovermode="x unified"
@@ -175,7 +157,7 @@ class Plotter:
             return fig
         return self.figure
 
-    def start(self):
-        thread = threading.Thread(target=self.app.run_server, kwargs={'port': 9000, 'debug': False, 'use_reloader': False})
+    def start(self, port=8000):
+        thread = threading.Thread(target=self.app.run_server, kwargs={'port': port, 'debug': False, 'use_reloader': False})
         thread.daemon = True
         thread.start()

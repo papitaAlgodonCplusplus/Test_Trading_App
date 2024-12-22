@@ -1,31 +1,20 @@
 from data_helpers.misc import print_colored_sentence
-def calculate_take_profit_stop_loss(entry_price, expected_ratio, stop_loss_percentage, inverse=False):
-    """
-    Calculate the take-profit and stop-loss prices required to match a given risk/reward ratio.
+def calculate_take_profit_stop_loss(entry_price, s_l_pips=5, t_p_pips=5, inverse=False):
+    pip_value = 0.0001 
+    s_l_change = s_l_pips * pip_value
+    t_p_change = t_p_pips * pip_value
 
-    Parameters:
-    - entry_price (float): The price at which the trade is entered.
-    - expected_ratio (float): The desired risk/reward ratio.
-    - stop_loss_percentage (float): The stop loss percentage (as a positive number).
-    - inverse (bool): If True, calculate for inverse logic (fall for take profit, rise for stop loss).
-
-    Returns:
-    - float: The take-profit price.
-    - float: The stop-loss price.
-    """
     if inverse:
-        take_profit_price = entry_price * (1 + stop_loss_percentage / 100)
-        risk = abs(take_profit_price - entry_price)
-        stop_loss_price = entry_price - risk * expected_ratio
+        stop_loss_price = entry_price + s_l_change
+        take_profit_price = entry_price - t_p_change
     else:
-        stop_loss_price = entry_price * (1 - stop_loss_percentage / 100)
-        risk = abs(entry_price - stop_loss_price)
-        take_profit_price = entry_price + risk * expected_ratio
+        stop_loss_price = entry_price - s_l_change
+        take_profit_price = entry_price + t_p_change
 
     return take_profit_price, stop_loss_price
 
 def read_recommendations():
-    with open("recommended_actions.txt", 'r') as f:
+    with open("temp_files/recommended_actions.txt", 'r') as f:
         last_recommended_action = f.readlines()[-1:]
         last_recommended_action = last_recommended_action[0] if last_recommended_action else None
     return last_recommended_action
@@ -40,7 +29,7 @@ def set_sell_action(data, last_action, last_recommended_action, rise, capital, _
     data.loc[int(len(data) - 1), 'Close'] = data_point['Close']
     data.loc[int(len(data) - 1), 'Volume'] = data_point['Volume']
     data_point = data.loc[int(len(data) - 1)]
-    with open('recommended_actions.txt', 'w') as file:
+    with open('temp_files/recommended_actions.txt', 'w') as file:
         pass
     capital += rise
     return capital
@@ -104,29 +93,54 @@ def calculate_loss(entry_price, price, stop_loss_price):
     else:
         return (price - entry_price) / (stop_loss_price - entry_price)
 
-def calculate_positive_reward(target_rr_ratio, entry_price, price, take_profit_price):
+def calculate_profit(entry_price, price, take_profit_price, target_rr_ratio=None):
     """
-    Normalize the risk-reward ratio to a value between 0 and target_rr_ratio,
-    where 0 corresponds to price = entry_price and target_rr_ratio corresponds to price = take_profit_price.
+    Calculate a value between 0 and target_rr_ratio based on price, entry_price, and take_profit_price.
 
     Parameters:
-        target_rr_ratio (float): The target risk-reward ratio.
-        entry_price (float): The entry price.
+        entry_price (float): The price at which the entry occurred.
         price (float): The current price.
-        take_profit_price (float): The maximum take-profit price.
+        take_profit_price (float): The take profit price.
+        target_rr_ratio (float, optional): The target risk/reward ratio. Defaults to None.
 
     Returns:
-        float: The normalized risk-reward value.
+        float: A value from 0 to target_rr_ratio, where 0 is when price equals entry_price and target_rr_ratio when price equals take_profit_price.
     """
-    if take_profit_price == entry_price:  # Avoid division by zero
-        raise ValueError("Take profit price and entry price must be different.")
-    normalized_value = ((price - entry_price) / (take_profit_price - entry_price)) * target_rr_ratio
-    return min(max(normalized_value, 0), target_rr_ratio)
+    if target_rr_ratio is None:
+        target_rr_ratio = 1  # Default to 1 if no target_rr_ratio is provided
 
-def reverse_action(action):
-    action = 'Buy' if action == 'Sell' else 'Sell' if action == 'Buy' else action
-    action = 'Sell Short' if action == 'Buy to Cover' else 'Buy to Cover' if action == 'Sell Short' else action
-    return action
+    # Ensure the value is within bounds [0, target_rr_ratio]
+    if price <= entry_price:
+        return 0  # Price is at or below entry, return 0
+    elif price >= take_profit_price:
+        return target_rr_ratio  # Price is at or above take profit, return target_rr_ratio
+    else:
+        return (price - entry_price) / (take_profit_price - entry_price) * target_rr_ratio
+
+def calculate_profit_inverse(entry_price, price, take_profit_price, target_rr_ratio=None):
+        """
+        Calculate a value between 0 and 1 based on price, entry_price, and take_profit_price.
+        
+        Returns 0 when price equals entry_price, and 1 when price equals take_profit_price,
+        assuming take_profit_price is greater than entry_price.
+
+        Parameters:
+            entry_price (float): The price at which the entry occurred.
+            price (float): The current price.
+            take_profit_price (float): The take profit price.
+
+        Returns:
+            float: A value from 0 to 1.
+        """
+        if target_rr_ratio is None:
+            target_rr_ratio = 1
+            
+        if price >= entry_price:
+            return 0
+        elif price <= take_profit_price:
+            return target_rr_ratio
+        else:
+            return (price - entry_price) / (take_profit_price - entry_price) * target_rr_ratio
 
 def handle_long_win(data, entry_price, price, take_profit_price, stop_loss_price, risk_amount,
 i, row, log=False, target_rr_ratio=3, profits=None, rr_ratios=None):
@@ -162,8 +176,8 @@ i, row, log=False, target_rr_ratio=3, profits=None, rr_ratios=None):
         print_colored_sentence(f"Dt: {row['Date']}, EntryPrice: {entry_price:.5f}, ExitPrice: {price:.5f}, Profit: {profits[-1]:.5f}, Reward: {reward:.5f}, StopLoss: {stop_loss_price:.5f}, TakeProfit: {take_profit_price:.5f}")
     return profits[-1]
 
-def handle_buy(data, entry_price, price, risk_amount, i, capital, profits, rr_ratios, target_rr_ratio, risk):
-    take_profit_price, stop_loss_price = calculate_take_profit_stop_loss(entry_price, target_rr_ratio, risk, inverse=False)
+def handle_buy(data, entry_price, price, risk_amount, i, capital, profits, rr_ratios, target_rr_ratio, risk, stop_loss_pips=5, take_profit_pips=5, pip_value=0.0001):
+    take_profit_price, stop_loss_price = calculate_take_profit_stop_loss(entry_price, inverse=False, s_l_pips=stop_loss_pips, t_p_pips=take_profit_pips)
     profits.append(0) 
     rr_ratios.append(0) 
     return take_profit_price, stop_loss_price
@@ -172,7 +186,7 @@ def handle_sell(data, entry_price, price, risk_amount, i, row, capital, profits,
     if price >= take_profit_price:
         reward = target_rr_ratio
     elif price >= entry_price:
-        reward = calculate_positive_reward(target_rr_ratio, entry_price=entry_price, price=price, take_profit_price=take_profit_price)
+        reward = calculate_profit(entry_price=entry_price, price=price, take_profit_price=take_profit_price, target_rr_ratio=target_rr_ratio)
     else:
         reward = -calculate_loss(entry_price=entry_price, price=price, stop_loss_price=stop_loss_price) if price >= stop_loss_price else -1
     rr_ratios.append(reward)
@@ -181,8 +195,8 @@ def handle_sell(data, entry_price, price, risk_amount, i, row, capital, profits,
         print_colored_sentence(f"Dt: {row['Date']}, EntryPrice: {entry_price:.5f}, ExitPrice: {price:.5f}, Profit: {profits[-1]:.5f}, Reward: {reward:.5f}, StopLoss: {stop_loss_price:.5f}, TakeProfit: {take_profit_price:.5f}")
     return profits[-1]
     
-def handle_sell_short(data, entry_price_short, price, risk_amount, i, capital, profits, rr_ratios, target_rr_ratio, risk, stop_loss_price, take_profit_price, log=False):
-    stop_loss_price, take_profit_price = calculate_take_profit_stop_loss(entry_price_short, target_rr_ratio, risk, inverse=True)
+def handle_sell_short(data, entry_price_short, price, risk_amount, i, capital, profits, rr_ratios, target_rr_ratio, risk, stop_loss_price, take_profit_price, log=False, stop_loss_pips=5, take_profit_pips=5, pip_value=0.0001):
+    take_profit_price, stop_loss_price = calculate_take_profit_stop_loss(entry_price_short, inverse=True, s_l_pips=stop_loss_pips, t_p_pips=take_profit_pips)
     profits.append(0) 
     rr_ratios.append(0) 
     return take_profit_price, stop_loss_price
@@ -191,7 +205,7 @@ def handle_buy_to_cover(data, entry_price_short, price, risk_amount, i, row, cap
     if price <= take_profit_price:
         reward = target_rr_ratio
     if price <= entry_price_short:
-        reward =  calculate_positive_reward(target_rr_ratio, entry_price=entry_price_short, price=price, take_profit_price=take_profit_price)
+        reward =  calculate_profit_inverse(entry_price=entry_price_short, price=price, take_profit_price=take_profit_price, target_rr_ratio=target_rr_ratio)
     else:
         reward = -calculate_loss_inverse(entry_price=entry_price_short, price=price, stop_loss_price=stop_loss_price) if price <= stop_loss_price else -1
     rr_ratios.append(reward)
@@ -200,7 +214,7 @@ def handle_buy_to_cover(data, entry_price_short, price, risk_amount, i, row, cap
         print_colored_sentence(f"Dt: {row['Date']}, EntryPrice: {entry_price_short:.5f}, ExitPrice: {price:.5f}, Profit: {profits[-1]:.5f}, Reward: {reward:.5f}, StopLoss: {stop_loss_price:.5f}, TakeProfit: {take_profit_price:.5f}")
     return profits[-1]
 
-def run_simulation(data, initial_capital=10000, reverse=False, risk_amount=0.1, target_rr_ratio=3, expected_profit=None, log=False, risk_percentage=0.01):
+def run_simulation(data, initial_capital=10000, reverse=False, risk_amount=0.1, target_rr_ratio=1, expected_profit=None, log=False, risk_percentage=0.01, stop_loss_pips=5, take_profit_pips=5, pip_value=0.0001):
     """
     Run a trading simulation with Risk/Reward ratio evaluation.
     """
@@ -214,11 +228,8 @@ def run_simulation(data, initial_capital=10000, reverse=False, risk_amount=0.1, 
     data["Stop Loss Short"] = data["Stop Loss Short"].astype(float)
     data["Take Profit Long"] = data["Take Profit Long"].astype(float)
     data["Stop Loss Long"] = data["Stop Loss Long"].astype(float)
-    data['Vault'] = data['Vault'].astype(float)
     for i, row in data.iterrows():
         action, price = row['Action'], row['Close']
-        if reverse:
-            action = reverse_action(action)
         if action == "Sell" and not entry_price:
             data.loc[i, 'Action'] = 'Sell_Short'
         if action == "Buy to Cover" and not entry_price_short:
@@ -253,7 +264,7 @@ def run_simulation(data, initial_capital=10000, reverse=False, risk_amount=0.1, 
         elif action == 'Buy' and entry_price is None:
             data.loc[i, 'Action'] = 'Buy'
             entry_price = price
-            take_profit_price, stop_loss_price = handle_buy(data, entry_price, price, risk_amount, i, capital, profits, rr_ratios, target_rr_ratio, risk)
+            take_profit_price, stop_loss_price = handle_buy(data, entry_price, price, risk_amount, i, capital, profits, rr_ratios, target_rr_ratio, risk, stop_loss_pips=stop_loss_pips, take_profit_pips=take_profit_pips, pip_value=0.0001)
             capital -= risk_amount
             data['Take Profit Long'] = data['Take Profit Long'].astype(float)
             data['Stop Loss Long'] = data['Stop Loss Long'].astype(float)
@@ -262,7 +273,7 @@ def run_simulation(data, initial_capital=10000, reverse=False, risk_amount=0.1, 
         elif action == 'Sell Short' and entry_price_short is None:
             data.loc[i, 'Action'] = 'Sell Short'
             entry_price_short = price
-            take_profit_price_short, stop_loss_price_short = handle_sell_short(data, entry_price_short, price, risk_amount, i, capital, profits, rr_ratios, target_rr_ratio, risk, stop_loss_price_short, take_profit_price_short, log)
+            take_profit_price_short, stop_loss_price_short = handle_sell_short(data, entry_price_short, price, risk_amount, i, capital, profits, rr_ratios, target_rr_ratio, risk, stop_loss_price_short, take_profit_price_short, log, stop_loss_pips=stop_loss_pips, take_profit_pips=take_profit_pips, pip_value=0.0001)
             capital -= risk_amount
             data.loc[i, 'Take Profit Short'] = take_profit_price_short
             data.loc[i, 'Stop Loss Short'] = stop_loss_price_short
