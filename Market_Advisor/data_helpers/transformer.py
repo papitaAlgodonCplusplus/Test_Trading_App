@@ -1,29 +1,20 @@
-import csv
+import pandas as pd
 from datetime import datetime
 
-def transform_csv(input_file, output_file):
-    with open(input_file, mode='r') as infile, open(output_file, mode='w', newline='') as outfile:
-        reader = csv.DictReader(infile)
-        fieldnames = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
-        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
-        
-        writer.writeheader()
-        
-        for row in reader:
-            date_str = row['Date']
-            date_obj = datetime.strptime(date_str, '%m/%d/%Y %H:%M')
-            formatted_date = date_obj.strftime('%Y-%m-%d %H:%M:%S')
-            
-            writer.writerow({
-                'Date': formatted_date,
-                'Open': row['Open'],
-                'High': row['High'],
-                'Low': row['Low'],
-                'Close': row['Close'],
-                'Volume': 0  # Assuming Volume is always 0 as per the example
-            })
+# Read the CSV file with tab separator
+df = pd.read_csv('data/input.csv', sep='\t')
 
-if __name__ == "__main__":
-    input_file = 'data/input.csv'
-    output_file = 'data/formatted_data.csv'
-    transform_csv(input_file, output_file)
+# Rename columns to match the desired output
+df.rename(columns={'<DATE>': 'Date', '<TIME>': 'Time', '<OPEN>': 'Open', '<HIGH>': 'High', '<LOW>': 'Low', '<CLOSE>': 'Close', '<TICKVOL>': 'Volume'}, inplace=True)
+
+# Combine Date and Time into a single datetime column and reformat
+df['Date'] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format='%Y.%m.%d %H:%M:%S')
+df['Date'] = df['Date'].dt.strftime('%Y-%m-%d %H:%M:%S')
+
+# Keep only the required columns
+df = df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']]
+
+# Save to output.csv
+df.to_csv('output.csv', index=False)
+
+print("Conversion complete. The output is saved as 'output.csv'.")

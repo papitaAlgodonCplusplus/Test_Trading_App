@@ -78,8 +78,8 @@ def preprocess_data(data):
     data.fillna(0, inplace=True)
     return data
 
-def prepare_lstm_data(data, lookback=10):
-    data["Target"] = (data["Close"].shift(-1) > data["Close"]).astype(int)
+def prepare_lstm_data(data, lookback=10, lookahead=20):
+    data["Target"] = (data["Close"].shift(lookahead) > data["Close"]).astype(int)
     features = data.drop(["Date", "Target"], axis=1).values
     target = data["Target"].values
 
