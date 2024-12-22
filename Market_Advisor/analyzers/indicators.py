@@ -111,6 +111,7 @@ def get_conditions(data, level, threshold=0.5, reverse=False):
         sell_short = (data['Candle_Pattern'] == 'Bullish Engulfing') | (data['RSI'] > 70)
         buy_to_cover = (data['Candle_Pattern'] == 'Bearish Engulfing') | (data['RSI'] < 30)
 
+    return data
     elif level == 5:
         buy_long = (data['Stoch_%K'] < 20) & (data['Low'] > data['Support'])
         sell_long =  (data['Stoch_%K'] > 80) & (data['High'] < data['Resistance'])
@@ -123,6 +124,29 @@ def get_conditions(data, level, threshold=0.5, reverse=False):
         sell_short = (data['MACD'] < data['MACD_Signal']) | (data['Close'] < data['SMA'])
         buy_to_cover = (data['MACD'] > data['MACD_Signal']) | (data['Close'] > data['SMA'])
 
+    if level >= 1:
+        bullish &= (data['RSI'] < 70)
+        bearish &= (data['RSI'] > 30)
+    if level >= 2:
+        bullish &= (data['Close'] > data['SMA_20'])
+        bearish &= (data['Close'] < data['SMA_20'])
+    if level >= 3:
+        bullish &= (data['Liquidity_Pool'] > 0.5)
+        bearish &= (data['Liquidity_Pool'] < 0.5)
+        bullish |= data['Order_Block_Valid'] & (data['Close'] > data['Low'].shift(1))
+        bearish |= data['Order_Block_Valid'] & (data['Close'] < data['High'].shift(1))
+    if level >= 4:
+        bullish &= (data['Close'] <= data['BB_Lower']) & (data['RSI'] < 70)
+        bearish &= (data['Close'] >= data['BB_Upper']) & (data['RSI'] > 30)
+        volatility_threshold = data['ATR'].mean() * 0.5
+        bullish |= (data['ATR'] > volatility_threshold) & (data['ATR'] < 2 * volatility_threshold)
+        bearish |= (data['ATR'] > volatility_threshold) & (data['ATR'] < 2 * volatility_threshold)
+    if level >= 5:
+        bullish |= (data['Close'] <= data['BB_Lower']) & (data['RSI'] < 70)
+        bearish |= (data['Close'] >= data['BB_Upper']) & (data['RSI'] > 30)
+        volatility_threshold = data['ATR'].mean() * 0.5
+        bullish &= (data['ATR'] > volatility_threshold) & (data['ATR'] < 2 * volatility_threshold)
+        bearish &= (data['ATR'] > volatility_threshold) & (data['ATR'] < 2 * volatility_threshold)
     elif level == 7:
         buy_long = (data['OBV'] > data['OBV'].rolling(5).mean()) | (data['Close'] > data['SMA']) & (data['ATR'] < data['ATR'].rolling(5).mean())
         sell_long = (data['OBV'] < data['OBV'].rolling(5).mean()) | (data['Close'] < data['SMA']) & (data['ATR'] > data['ATR'].rolling(5).mean())

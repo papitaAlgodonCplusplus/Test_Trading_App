@@ -6,6 +6,61 @@ import numpy as np
 from termcolor import colored
 import MetaTrader5 as mt5
 
+def read_last_written_row(file_path="last_row.txt"):
+    """Read the last written row from a file."""
+    try:
+        with open(file_path, "r") as file:
+            return int(file.read().strip())  # Read and convert to integer
+    except (FileNotFoundError, ValueError):
+        return 0  # Default to 0 if the file doesn't exist or is empty
+    
+def read_actions_from_file(file_path):
+    """Read actions from a file and return as a DataFrame."""
+    try:
+        with open(file_path, "r") as file:
+            lines = file.readlines()
+
+        actions = []
+        for line in lines:
+            # Safely split the line into Timestamp and Action
+            parts = line.strip().split(": ", 1)  # Split on the first ": "
+            if len(parts) == 2:
+                timestamp, action = parts
+                actions.append({"Timestamp": timestamp, "Action": action})
+            else:
+                print(f"Skipping malformed line: {line.strip()}")
+
+        # Convert to DataFrame
+        actions_df = pd.DataFrame(actions)
+        if not actions_df.empty:
+            actions_df["Timestamp"] = pd.to_datetime(actions_df["Timestamp"], errors="coerce")  # Convert to datetime
+            actions_df.dropna(subset=["Timestamp"], inplace=True)  # Drop rows with invalid timestamps
+            actions_df.set_index("Timestamp", inplace=True)  # Set Timestamp as the index
+        else:
+            print("No valid data found in the file.")
+            return None
+
+        return actions_df
+
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+        return None
+    except Exception as e:
+        print(f"Error reading actions from file: {e}")
+        return None
+
+def write_last_written_row(last_written_row, file_path="last_row.txt"):
+    """Write the last written row to a file."""
+    with open(file_path, "w") as file:
+        file.write(str(last_written_row))
+
+def write_actions_to_file(data, file_path="actions.txt"):
+    """Write actions to a file."""
+    with open(file_path, "w") as file:
+        for row in data.itertuples():
+            formatted_date = row.Date.isoformat() if isinstance(row.Date, pd.Timestamp) else str(row.Date)
+            file.write(f"{formatted_date}: {row.Action}\n")
+
 def handle_trailing_stop_loss(data, code_multiplier):
     last_long_entry_price = data.loc[data['Action'] == 'Buy', 'Close'].iloc[-1] if not data.loc[data['Action'] == 'Buy', 'Close'].empty else None
     last_short_entry_price = data.loc[data['Action'] == 'Sell Short', 'Close'].iloc[-1] if not data.loc[data['Action'] == 'Sell Short', 'Close'].empty else None
@@ -478,6 +533,24 @@ def print_colored_sentence(sentence):
         print(colored(word, color), end=" ")
     print()
 
+def pad_vault(data):
+    data.reset_index(drop=True, inplace=True)
+    data.fillna(0, inplace=True) 
+    if 'Vault' not in data.columns:
+        data['Vault'] = 0
+    if 'Profit' not in data.columns:
+        data['Profit'] = 0
+    best_vault = max(data.loc[0, 'Vault'], data.loc[0, 'Profit'])
+    for i in range(0, len(data)):
+        if data.loc[i, 'Profit'] > 0:
+            best_vault += data.loc[i, 'Profit']
+            data.loc[i, 'Vault'] = best_vault
+        if data.loc[i, 'Vault'] < best_vault:
+            data.loc[i, 'Vault'] = best_vault
+        if data.loc[i, 'Profit'] > data.loc[max(0, i-1), 'Profit']:
+            data.loc[i, 'Action'] = 'Sell'
+        if data.loc[i, 'Profit'] < data.loc[max(0, i-1), 'Profit'] and data.loc[i, 'Profit'] < 0:
+            data.loc[i, 'Action'] = 'Buy'
 def calculate_profit_summatory(data):
     data['Profit Summatory'] = data['Profit'].cumsum()
 
@@ -550,6 +623,11 @@ def write_to_file(output_file, best_results):
 
     print(f"Best hyperparameters saved to {output_file}")
 
+def calculate_data_length(file_path):
+    data = pd.read_csv(file_path)
+    return len(data)
+
+def load_data(file_path, reverse=False, initial_capital=50000, multiply_factor=None):
 import pandas as pd
 import numpy as np
 
@@ -644,6 +722,15 @@ def load_data(
         },
     }
 
+    results = []
+    analysis_levels = [0, 1, 2, 3, 4] #, 5
+    threshold_options = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+    # risk_options = [(initial_capital * 0.01) * i for i in range(1, 100, 5)]
+    risk_options = [initial_capital * 0.95]
+
+    output_file = "best_hyperparameters.txt"
+
+    return data, predictions, probabilities, results, analysis_levels, threshold_options, risk_options, 0, output_file
     summatory_of_indicators = forex_indicate(file_path, web_scraping)
     
     if summatory_of_indicators >= advisor_threshold:
