@@ -18,7 +18,7 @@ def schedule_main(file_path, plotter, storage):
             initial_capital=50000 * risk_ratio
             main_logic(file_path, plotter, storage, context_window=200, expected_profit=None, initial_capital=initial_capital, u_a=False, deep_analysis=False, reverse=False,
             bot_type=7, rt=True, freeze=13, forced_patience=True, stop_loss_pips=3, take_profit_pips=9, pip_value=0.0001, target_rr_ratio=3, code_multiplier=2,
-            log_file="temp_files/last_action_log.txt", trailing_stop_loss=True,
+            log_file="temp_files/log.json", trailing_stop_loss=True,
             advisors_threshold=2, web_scraping="5m")
         except Exception as e:
             print(f"Error occurred: {e}")

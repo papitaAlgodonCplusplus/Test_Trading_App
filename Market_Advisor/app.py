@@ -40,15 +40,14 @@ def schedule_main(file_path, plotter, storage, params, log_file):
                     target_rr_ratio=params["take_profit_pips"] / params["stop_loss_pips"],
                     code_multiplier=params["code_multiplier"], 
                     log_file=log_file, trailing_stop_loss=True,
-                    advisors_threshold=2, web_scraping=params["web_scraping"]
+                    advisors_threshold=3, web_scraping=params["web_scraping"]
                 )
             except Exception as e:
                 print(f"Error occurred in {log_file}: {e}")
                 traceback.print_exc()
-            time.sleep(1)
+            time.sleep(5)
     except (KeyboardInterrupt, SystemExit):
-        print("Exiting... Clearing CSV data.")
-        clear_csv(file_path)
+        print("Exiting....")
 
 
 def start_bot(port, stop_loss, take_profit, multiplier, initial_capital, log_file, web_scraping):
@@ -61,7 +60,7 @@ def start_bot(port, stop_loss, take_profit, multiplier, initial_capital, log_fil
     if not os.path.exists(log_file):
         os.makedirs(os.path.dirname(log_file), exist_ok=True)
         with open(log_file, 'w') as f:
-            f.write("Log initialized\n")
+            f.write("")
 
     params = {
         "initial_capital": initial_capital,
@@ -124,13 +123,15 @@ class BotUI(QMainWindow):
         self.port_input.setRange(1000, 9999)
         self.stop_loss_input = QSpinBox()
         self.stop_loss_input.setRange(1, 100)
+        self.stop_loss_input.setValue(4)
         self.take_profit_input = QSpinBox()
         self.take_profit_input.setRange(1, 100)
+        self.take_profit_input.setValue(12)
         self.multiplier_input = QComboBox()
         self.multiplier_input.addItems(["1", "2", "3", "4", "5"])
-        self.log_file_input = QLineEdit("temp_files/log.txt")
+        self.log_file_input = QLineEdit("temp_files/log.json")
         self.web_scraping_input = QComboBox()
-        self.web_scraping_input.addItems(["5m", "15m", "1h"])
+        self.web_scraping_input.addItems(["5m", "15m", "1h", "5h"])
         self.initial_capital_input = QSpinBox()
         self.initial_capital_input.setRange(1000, 1000000)
         self.initial_capital_input.setValue(50000)
@@ -139,8 +140,7 @@ class BotUI(QMainWindow):
         self.form_layout.addRow("Port:", self.port_input)
         self.form_layout.addRow("Stop Loss (pips):", self.stop_loss_input)
         self.form_layout.addRow("Take Profit (pips):", self.take_profit_input)
-        self.form_layout.addRow("Multiplier:", self.multiplier_input)
-        self.form_layout.addRow("Log File:", self.log_file_input)
+        self.form_layout.addRow("Bot #:", self.multiplier_input)
         self.form_layout.addRow("Web Scraping Interval:", self.web_scraping_input)
         self.form_layout.addRow("Initial Capital:", self.initial_capital_input)
 
@@ -213,7 +213,6 @@ def write_csv(output_file):
     # Initialize the MT5 terminal
     if not mt5.initialize():
         print("Initialize() failed, error code =", mt5.last_error())
-        quit()
 
     # Define symbol and timeframe
     symbol = "EURUSD"
@@ -263,8 +262,7 @@ def write_csv(output_file):
             else:
                 print("No data retrieved from MetaTrader 5.")
 
-            # Wait for 60 seconds before fetching new data again
-            time.sleep(60)
+            time.sleep(5)
 
     except KeyboardInterrupt:
         print("Data collection stopped by user.")
@@ -283,8 +281,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     output_file = "data/real_time_data.csv"
     start_csv_writer(output_file)
-
-    # Launch UI
     window = BotUI()
     window.show()
     try:

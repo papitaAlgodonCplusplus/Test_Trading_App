@@ -7,7 +7,6 @@ import os
 # Initialize the MT5 terminal
 if not mt5.initialize():
     print("Initialize() failed, error code =", mt5.last_error())
-    quit()
 
 # Define symbol and timeframe
 symbol = "EURUSD"

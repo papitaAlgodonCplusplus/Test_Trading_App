@@ -5,116 +5,133 @@ from datetime import datetime
 import numpy as np
 from termcolor import colored
 import MetaTrader5 as mt5
+import json
 
-def handle_trailing_stop_loss(data, code_multiplier):
-    last_long_entry_price = data.loc[data['Action'] == 'Buy', 'Close'].iloc[-1] if not data.loc[data['Action'] == 'Buy', 'Close'].empty else None
-    last_short_entry_price = data.loc[data['Action'] == 'Sell Short', 'Close'].iloc[-1] if not data.loc[data['Action'] == 'Sell Short', 'Close'].empty else None
-    current_price = data['Close'].iloc[-1]
-    last_buy_action_index = data.loc[data['Action'] == 'Buy'].index[-1] if not data.loc[data['Action'] == 'Buy'].empty else None
-    last_sell_action_index = data.loc[data['Action'] == 'Sell Short'].index[-1] if not data.loc[data['Action'] == 'Sell Short'].empty else None
-    if last_buy_action_index is not None and last_sell_action_index is not None and last_buy_action_index > last_sell_action_index:
-        price_diff = current_price - last_long_entry_price
-        current_stop_loss = data.loc[len(data) - 1, 'Stop Loss Long']
-        if price_diff > 0 and current_stop_loss < current_price - price_diff:
-            change_stop_loss("111111", last_long_entry_price + price_diff, code_multiplier)
-            data.loc[len(data) - 1, 'Stop Loss Long'] = last_long_entry_price + price_diff
-    last_sell_short_action_index = data.loc[data['Action'] == 'Sell Short'].index[-1] if not data.loc[data['Action'] == 'Sell Short'].empty else None
-    last_buy_to_cover_action_index = data.loc[data['Action'] == 'Buy to Cover'].index[-1] if not data.loc[data['Action'] == 'Buy to Cover'].empty else None
-    if last_sell_short_action_index is not None and last_buy_to_cover_action_index is not None and last_sell_short_action_index > last_buy_to_cover_action_index:
-        price_diff = current_price - last_short_entry_price
-        current_stop_loss = data.loc[len(data) - 1, 'Stop Loss Short']
-        if price_diff < 0 and current_stop_loss > current_price - price_diff:
-            change_stop_loss("111222", last_short_entry_price + price_diff, code_multiplier)
-            data.loc[len(data) - 1, 'Stop Loss Short'] = last_short_entry_price + price_diff
-
-def check_position_by_magic(magic_number, log_file):
+def check_position_by_magic(magic_number, storage, data, stop_loss_pips=5, multiplier=1):
     # Get all open positions
     positions = mt5.positions_get()
-    
     if not positions:
         print_red_blue("No open positions, holding.")
-        open(log_file, 'w').close()
+        storage.set_last_action("")
+        if storage.get_last_closing_date() is None:
+            storage.set_last_closing_date(datetime.now())
         return
     
     # Check if there are positions with the specified magic number
     position_found = False
-    for position in positions:
-        if position.magic == magic_number:
-            print_colored_sentence(f"Position encountered with magic number: {position.magic}")
+    position = None
+    for psn in positions:
+        if str(psn.magic).strip() == str(magic_number.strip()):
             position_found = True
+            position = psn
     
     # If no position matches the magic number, create an empty file
     if not position_found:
         print_red_blue(f"No position with magic number {magic_number} found. Creating empty log file.")
-        open(log_file, 'w').close()
+        if int(magic_number) / multiplier == 111111 and storage.get_last_action() == "Buy":
+            storage.set_last_action("")
+            storage.set_last_closing_date(datetime.now())
+        elif int(magic_number) / multiplier == 111222 and storage.get_last_action() == "Sell Short":
+            storage.set_last_action("")
+            storage.set_last_closing_date(datetime.now())
+        return
+    else:
+        current_price = data['Close'].iloc[-1]
+        # margin = round(((stop_loss_pips * 0.0001) / 18), 5)
+        margin = 0.0001 * 2
+        if position.type == mt5.ORDER_TYPE_BUY:
+            new_stop_loss = current_price - (0.0001)
+            print_colored_sentence(f"Is current price {current_price} greater than position price open {position.price_open} by at least {margin}?: {current_price > position.price_open + margin}: Current Difference: {round(current_price - position.price_open, 5)}")
+            if current_price > position.price_open + margin and (new_stop_loss > position.sl):
+                print_colored_sentence(f"Stop loss for position {position.ticket} is {position.sl}")
+                change_stop_loss(magic_number, new_stop_loss)
+                data.loc[len(data) - 1, 'Stop Loss Long'] = new_stop_loss
+                print_colored_sentence(f"Stop loss for position {position.ticket} updated to {new_stop_loss}")
+            
+            date_position_opened = datetime.fromtimestamp(position.time)
+            now = datetime.now()
+            difference = now - date_position_opened
+            if difference.total_seconds() // 60 > 20 and current_price <= position.price_open:
+                print_colored_sentence(f"Position {position.ticket} has been open for more than 20 minutes and current price is less than or equal to position price open, Adjusting Stop Loss")
+                new_stop_loss = current_price - (stop_loss_pips * 0.0001) / ((difference.total_seconds() // 60) / 10)
+                change_stop_loss(magic_number, new_stop_loss)
+        elif position.type == mt5.ORDER_TYPE_SELL:
+            new_stop_loss = current_price + (0.0001)
+            print_colored_sentence(f"Is current price {current_price} less than position price open {position.price_open} by at least {margin}?: {current_price < position.price_open - margin}: Current Difference: {round(current_price - position.price_open, 5)}")
+            if current_price < position.price_open - margin and (new_stop_loss < position.sl):
+                print_colored_sentence(f"Stop loss for position {position.ticket} is {position.sl}")
+                change_stop_loss(magic_number, new_stop_loss)
+                data.loc[len(data) - 1, 'Stop Loss Short'] = new_stop_loss
+                print_colored_sentence(f"Stop loss for position {position.ticket} updated to {new_stop_loss}")
         
+            date_position_opened = datetime.fromtimestamp(position.time)
+            now = datetime.now()
+            difference = now - date_position_opened
+            if difference.total_seconds() // 60 > 20 and current_price >= position.price_open:
+                print_colored_sentence(f"Position {position.ticket} has been open for more than 20 minutes and current price is greater than or equal to position price open, Adjusting Stop Loss")
+                new_stop_loss = current_price + (stop_loss_pips * 0.0001) / ((difference.total_seconds() // 60) / 10)
+                change_stop_loss(magic_number, new_stop_loss)
+            
 def get_current_timestamp():
     """Returns the current date and time (excluding seconds) as a string."""
     return datetime.now().strftime("%Y-%m-%d %H:%M")
+import json
+from datetime import datetime
 
-def log_action(action, LOG_FILE):
-    """Logs the action with the current date/hour to the log file."""
-    timestamp = get_current_timestamp()
-    with open(LOG_FILE, "a") as file:
-        file.write(f"{timestamp} - {action}\n")
+def log_action(action, storage=None):
+    storage.set_last_action(action)
+    storage.set_last_closing_date(None)
+    print_red_blue(f"Last Action: {action} at {get_current_timestamp()}")
 
-def has_recent_action(current_action, LOG_FILE):
-    """Checks if the current date/hour exists in the log file and that the last action is not equal to the current action."""
-    timestamp = get_current_timestamp()
-    
-    try:
-        with open(LOG_FILE, "r") as file:
-            lines = file.readlines()
-            
-            # Check if the current timestamp exists in the file
-            for line in lines:
-                if timestamp in line:
-                    print_red_blue(f"An action has already been sent at {timestamp}. Skipping action.")
-                    return True
-            
-            # Check if the last logged action is the same as the current action
-            if lines:
-                last_line = lines[-1].strip()
-                if last_line.endswith(current_action):
-                    print_red_blue(f"Last action was the same as the current action: {current_action}. Skipping action.")
-                    return True
-                
-    except FileNotFoundError:
-        return False
-
+def has_recent_action(current_action, storage):
+    if storage.get_last_action() == current_action:
+        print_red_blue(f"Last action is the same as current action: {current_action}, {storage.get_last_action()}")
+        return True
+    positions = mt5.positions_get()
+    if positions:
+        print_red_blue("There are open positions, holding.")
+        return True
+    print_red_blue(f"Last action is different from current action: {current_action}, {storage.get_last_action()}")
     return False
 
-def send_action_to_mt5(data, symbol, stop_loss_pips=5, take_profit_pips=5, trailing_stop_pips=10, code_multiplier=1, log_file=None):
+def send_action_to_mt5(data, symbol, stop_loss_pips=5, take_profit_pips=5, lots=75.0, code_multiplier=1, storage=None, reverse=True):
     last_action = data["Action"].iloc[-1]
-
-    LOG_FILE = "temp_files/last_action_log.txt"
-    if log_file is not None:
-        LOG_FILE = log_file
-    if has_recent_action(last_action, LOG_FILE):
+    if reverse:
+        if last_action == "Buy":
+            last_action = "Sell Short"
+        elif last_action == "Sell Short":
+            last_action = "Buy"
+    if has_recent_action(last_action, storage):
         return
-
-    lots = 0.5
-
+    now = datetime.now()
+    if storage.get_last_closing_date() is not None:
+        print_red_blue(f"Last closing date: {storage.get_last_closing_date()}, now: {now}, difference: {(now - storage.get_last_closing_date()).total_seconds()}, which is less than 10 minutes?: {(now - storage.get_last_closing_date()).total_seconds() < 60 * 10}")
+        if (now - storage.get_last_closing_date()).total_seconds() < 60 * 10:
+            return
+    else:
+        print_red_blue("Last closing date is None")
     if last_action == "Buy":
         price = mt5.symbol_info_tick(symbol).ask
         stop_loss = price - (0.0001) * stop_loss_pips
         take_profit = price + (0.0001) * take_profit_pips
-        trailing_stop = int(trailing_stop_pips * 10)  # MT5 uses points (1 pip = 10 points)
-        
+        buy_result = None
         buy_result = place_buy_order(symbol, lots, price, stop_loss, take_profit, code_multiplier)
-        print_colored_sentence(f"Buy Order Result: {buy_result}")
-        log_action("Buy", LOG_FILE)
+        if buy_result is not None:
+            print_colored_sentence(f"Buy Order Result: {buy_result}")
+            if buy_result.comment != "Invalid stops":
+                log_action("Buy", storage)
         mt5.shutdown()
 
     elif last_action == "Sell Short":
         price = mt5.symbol_info_tick(symbol).bid
         stop_loss = price + (0.0001) * stop_loss_pips
         take_profit = price - (0.0001) * take_profit_pips
-        trailing_stop = int(trailing_stop_pips * 10)  # MT5 uses points (1 pip = 10 points)
-
+        sell_result = None
         sell_result = place_sell_order(symbol, lots, price, stop_loss, take_profit, code_multiplier)
-        print_colored_sentence(f"Sell Short Order Result: {sell_result}")
-        log_action("Sell Short", LOG_FILE)
+        if sell_result is not None:
+            print_colored_sentence(f"Sell Order Result: {sell_result}")
+            if sell_result.comment != "Invalid stops":
+                log_action("Sell Short", storage)
         mt5.shutdown()
 
     elif last_action == "Sell":
@@ -123,14 +140,12 @@ def send_action_to_mt5(data, symbol, stop_loss_pips=5, take_profit_pips=5, trail
             print(f"Failed to get tick info for symbol: {symbol}, {mt5.last_error()}")
             return
         volume = lots
-        close_position("111111", volume, code_multiplier)
-        log_action("Sell", LOG_FILE)
+        close_position("111111", volume, code_multiplier, storage=storage)
         mt5.shutdown()
 
     elif last_action == "Buy to Cover":
         volume = lots
-        close_position("111222", volume, code_multiplier)
-        log_action("Buy to Cover", LOG_FILE)
+        close_position("111222", volume, code_multiplier, storage=storage)
         mt5.shutdown()
 
 def calculate_partial_volume(entry_price, current_price, position_volume, close_percentage_per_pip=0.05):
@@ -166,10 +181,7 @@ def change_stop_loss(magic_number, new_stop_loss, code_multiplier=1):
         magic_number *= code_multiplier
 
     for position in positions:
-        print_colored_sentence(f"MAGIC: {position.magic}, {magic_number}")
         if position.magic == magic_number:
-            print_colored_sentence(f"Found position to update stop loss: Ticket {position.ticket}, Current Stop Loss {position.sl}")
-
             # Create stop loss change request
             sl_request = {
                 "action": mt5.TRADE_ACTION_SLTP,
@@ -178,26 +190,27 @@ def change_stop_loss(magic_number, new_stop_loss, code_multiplier=1):
                 "sl": new_stop_loss,
                 "tp": position.tp,  # Keep the current take profit unchanged
                 "magic": magic_number,
-                "comment": f"Change stop loss to {new_stop_loss}",
             }
-
-            print_colored_sentence(f"Sending stop loss change request: {sl_request}")
 
             # Send the order
             result = mt5.order_send(sl_request)
             print_colored_sentence(f"OrderSend Result: {result}")
 
-            if result.retcode == mt5.TRADE_RETCODE_DONE:
-                print_colored_sentence(f"Successfully updated stop loss for position {position.ticket} to {new_stop_loss}")
-                return True
+            if result is not None: 
+                if result.retcode == mt5.TRADE_RETCODE_DONE:
+                    print_colored_sentence(f"Successfully updated stop loss for position {position.ticket} to {new_stop_loss}")
+                    return True
+                else:
+                    print_colored_sentence(f"Failed to update stop loss for position {position.ticket}: {result.retcode}, {result.comment}")
+                    return False
             else:
-                print_colored_sentence(f"Failed to update stop loss for position {position.ticket}: {result.retcode}, {result.comment}")
+                print_colored_sentence(f"Failed to update stop loss for position {position.ticket}: {mt5.last_error()}")
                 return False
 
     print_colored_sentence(f"No positions found with magic number {magic_number}")
     return False
 
-def close_position(magic_number, close_volume, code_multiplier=1):
+def close_position(magic_number, close_volume, code_multiplier=1, storage=None):
     positions = mt5.positions_get()
     if not positions:
         print_colored_sentence("No open positions found.")
@@ -209,7 +222,6 @@ def close_position(magic_number, close_volume, code_multiplier=1):
         magic_number *= code_multiplier
 
     for position in positions:
-        print_colored_sentence(f"MAGIC: {position.magic}, {magic_number}")
         if position.magic == magic_number:
             print_colored_sentence(f"Found position to partially close: Ticket {position.ticket}, Volume {position.volume}")
 
@@ -226,7 +238,7 @@ def close_position(magic_number, close_volume, code_multiplier=1):
                 "volume": close_volume,
                 "type": mt5.ORDER_TYPE_SELL if position.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY,
                 "price": mt5.symbol_info_tick(position.symbol).bid if position.type == mt5.ORDER_TYPE_BUY else mt5.symbol_info_tick(position.symbol).ask,
-                "deviation": 10,
+                "deviation": 20,
                 "magic": magic_number,
                 "comment": f"Partial close of {close_volume} lots",
             }
@@ -237,23 +249,26 @@ def close_position(magic_number, close_volume, code_multiplier=1):
             result = mt5.order_send(close_request)
             print_colored_sentence(f"OrderSend Result: {result}")
 
-            if result.retcode == mt5.TRADE_RETCODE_DONE:
-                print_colored_sentence(f"Successfully closed {close_volume} lots of position {position.ticket}")
-                # Verify remaining volume
-                updated_positions = mt5.positions_get(ticket=position.ticket)
-                if updated_positions:
-                    remaining_volume = updated_positions[0].volume
-                    print_colored_sentence(f"Remaining volume for position {position.ticket}: {remaining_volume}")
+            if result is not None:
+                if result.retcode == mt5.TRADE_RETCODE_DONE:
+                    print_colored_sentence(f"Successfully closed {close_volume} lots of position {position.ticket}")
+                    log_action("", storage)
+                    # Verify remaining volume
+                    updated_positions = mt5.positions_get(ticket=position.ticket)
+                    if updated_positions:
+                        remaining_volume = updated_positions[0].volume
+                        print_colored_sentence(f"Remaining volume for position {position.ticket}: {remaining_volume}")
+                    else:
+                        print_colored_sentence(f"Position {position.ticket} no longer exists (fully closed).")
+                    return True
                 else:
-                    print_colored_sentence(f"Position {position.ticket} no longer exists (fully closed).")
-                return True
+                    print_colored_sentence(f"Failed to close position {position.ticket}: {result.retcode}, {result.comment}")
+                    return False
             else:
-                print_colored_sentence(f"Failed to close position {position.ticket}: {result.retcode}, {result.comment}")
-                return False
+                print_colored_sentence(f"Position {position.ticket} does not match magic number {magic_number}")
 
     print_colored_sentence(f"No positions found with magic number {magic_number}")
     return False
-
 
 def place_buy_order(symbol, volume, price, stop_loss, take_profit, code_multiplier):
     request = {
@@ -264,7 +279,7 @@ def place_buy_order(symbol, volume, price, stop_loss, take_profit, code_multipli
         "price": price,
         "sl": stop_loss,
         "tp": take_profit,
-        "deviation": 10,
+        "deviation": 20,
         "magic": 111111 * code_multiplier,
         "comment": "Python Buy Order",
         "type_time": mt5.ORDER_TIME_GTC,
@@ -294,7 +309,7 @@ def place_sell_order(symbol, volume, price, stop_loss, take_profit, code_multipl
         "price": price,
         "sl": stop_loss,
         "tp": take_profit,
-        "deviation": 10,
+        "deviation": 20,
         "magic": 111222 * code_multiplier,
         "comment": "Python Sell Order",
         "type_time": mt5.ORDER_TIME_GTC,
@@ -549,9 +564,6 @@ def write_to_file(output_file, best_results):
             f.write("-" * 50 + "\n")
 
     print(f"Best hyperparameters saved to {output_file}")
-
-import pandas as pd
-import numpy as np
 
 def load_data(
     file_path, 
