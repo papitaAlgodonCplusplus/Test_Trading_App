@@ -1,11 +1,33 @@
 from analyzers.indicators import get_conditions
 import traceback
+from termcolor import colored
+
+def print_colored_sentence(sentence):
+    colors = ['red', 'yellow', 'green', 'cyan', 'blue', 'magenta']
+    words = sentence.split()
+    for i, word in enumerate(words):
+        color = colors[i % len(colors)]
+        print(colored(word, color), end=" ")
+    print()
+
+def define_actions(data, probabilities, threshold=0.5, analysis_level=0, zigzag=False, context_window=None, last_written_row=0):
+    """Define trading actions based on indicators."""
+    
+    data_backup = data.copy()
+    probabilities_backup = probabilities.copy()
+    if context_window is not None:
+        try:
+            data_backup = data_backup.iloc[:context_window]
+            probabilities_backup = probabilities[:context_window]
+        except:
+            traceback.print_exc()
+            print("Error occurred while defining actions.")
+
 import pandas as pd
 from termcolor import colored
 
 import pandas as pd
 import traceback
-
 def define_actions(data, probabilities, threshold=0.5, analysis_level=0, zigzag=False, context_window=None, patience=20, stop_loss=0.2, take_profit=0.5, reverse=False):
     """Define trading actions based on indicators, enforcing patience for consecutive holds."""
     data_backup = data.copy()

@@ -28,6 +28,7 @@ class Plotter:
         )(self.update_figure)
 
     def update_figure(self, n_intervals):
+        if self.data is not None and self.predictions is not None:
         if self.data_backtest is not None:
             # Create subplots: 3 rows, 1 column
             fig = sp.make_subplots(

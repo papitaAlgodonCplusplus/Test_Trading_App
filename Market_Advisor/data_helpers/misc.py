@@ -493,6 +493,24 @@ def print_colored_sentence(sentence):
         print(colored(word, color), end=" ")
     print()
 
+def pad_vault(data):
+    data.reset_index(drop=True, inplace=True)
+    data.fillna(0, inplace=True) 
+    if 'Vault' not in data.columns:
+        data['Vault'] = 0
+    if 'Profit' not in data.columns:
+        data['Profit'] = 0
+    best_vault = max(data.loc[0, 'Vault'], data.loc[0, 'Profit'])
+    for i in range(0, len(data)):
+        if data.loc[i, 'Profit'] > 0:
+            best_vault += data.loc[i, 'Profit']
+            data.loc[i, 'Vault'] = best_vault
+        if data.loc[i, 'Vault'] < best_vault:
+            data.loc[i, 'Vault'] = best_vault
+        if data.loc[i, 'Profit'] > data.loc[max(0, i-1), 'Profit']:
+            data.loc[i, 'Action'] = 'Sell'
+        if data.loc[i, 'Profit'] < data.loc[max(0, i-1), 'Profit'] and data.loc[i, 'Profit'] < 0:
+            data.loc[i, 'Action'] = 'Buy'
 def calculate_profit_summatory(data):
     data['Profit Summatory'] = data['Profit'].cumsum()
 
@@ -656,6 +674,15 @@ def load_data(
         },
     }
 
+    results = []
+    analysis_levels = [0, 1, 2, 3, 4] #, 5
+    threshold_options = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+    # risk_options = [(initial_capital * 0.01) * i for i in range(1, 100, 5)]
+    risk_options = [initial_capital * 0.95]
+
+    output_file = "best_hyperparameters.txt"
+
+    return data, predictions, probabilities, results, analysis_levels, threshold_options, risk_options, 0, output_file
     summatory_of_indicators = forex_indicate(file_path, web_scraping)
     
     if summatory_of_indicators >= advisor_threshold:
