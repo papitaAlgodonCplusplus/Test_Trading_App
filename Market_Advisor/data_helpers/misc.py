@@ -36,41 +36,36 @@ def check_position_by_magic(magic_number, storage, data, stop_loss_pips=5, multi
             storage.set_last_closing_date(datetime.now())
         return
     else:
-        current_price = data['Close'].iloc[-1]
-        # margin = round(((stop_loss_pips * 0.0001) / 18), 5)
-        margin = 0.0001 * 2
+        symbol_tick = mt5.symbol_info_tick(position.symbol)
+        current_price = symbol_tick.bid if position.type == mt5.ORDER_TYPE_BUY else symbol_tick.ask
+        date_position_opened = datetime.fromtimestamp(position.time)
+        now = datetime.now()
+        difference = now - date_position_opened
+        minutes_open = difference.total_seconds() // 60
+
+        # Dynamically adjust the margin every 5 minutes
+        multiplier = max(0.5, 4 - (minutes_open // 5))  # Decrease multiplier, but not below 0.5
+        margin = 0.00001 * multiplier
+
         if position.type == mt5.ORDER_TYPE_BUY:
             new_stop_loss = current_price - (0.0001)
             print_colored_sentence(f"Is current price {current_price} greater than position price open {position.price_open} by at least {margin}?: {current_price > position.price_open + margin}: Current Difference: {round(current_price - position.price_open, 5)}")
+            
             if current_price > position.price_open + margin and (new_stop_loss > position.sl):
                 print_colored_sentence(f"Stop loss for position {position.ticket} is {position.sl}")
                 change_stop_loss(magic_number, new_stop_loss)
                 data.loc[len(data) - 1, 'Stop Loss Long'] = new_stop_loss
                 print_colored_sentence(f"Stop loss for position {position.ticket} updated to {new_stop_loss}")
-            
-            date_position_opened = datetime.fromtimestamp(position.time)
-            now = datetime.now()
-            difference = now - date_position_opened
-            if difference.total_seconds() // 60 > 20 and current_price <= position.price_open:
-                print_colored_sentence(f"Position {position.ticket} has been open for more than 20 minutes and current price is less than or equal to position price open, Adjusting Stop Loss")
-                new_stop_loss = current_price - (stop_loss_pips * 0.0001) / ((difference.total_seconds() // 60) / 10)
-                change_stop_loss(magic_number, new_stop_loss)
+
         elif position.type == mt5.ORDER_TYPE_SELL:
             new_stop_loss = current_price + (0.0001)
             print_colored_sentence(f"Is current price {current_price} less than position price open {position.price_open} by at least {margin}?: {current_price < position.price_open - margin}: Current Difference: {round(current_price - position.price_open, 5)}")
+            
             if current_price < position.price_open - margin and (new_stop_loss < position.sl):
                 print_colored_sentence(f"Stop loss for position {position.ticket} is {position.sl}")
                 change_stop_loss(magic_number, new_stop_loss)
                 data.loc[len(data) - 1, 'Stop Loss Short'] = new_stop_loss
                 print_colored_sentence(f"Stop loss for position {position.ticket} updated to {new_stop_loss}")
-        
-            date_position_opened = datetime.fromtimestamp(position.time)
-            now = datetime.now()
-            difference = now - date_position_opened
-            if difference.total_seconds() // 60 > 20 and current_price >= position.price_open:
-                print_colored_sentence(f"Position {position.ticket} has been open for more than 20 minutes and current price is greater than or equal to position price open, Adjusting Stop Loss")
-                new_stop_loss = current_price + (stop_loss_pips * 0.0001) / ((difference.total_seconds() // 60) / 10)
-                change_stop_loss(magic_number, new_stop_loss)
             
 def get_current_timestamp():
     """Returns the current date and time (excluding seconds) as a string."""
@@ -94,7 +89,7 @@ def has_recent_action(current_action, storage):
     print_red_blue(f"Last action is different from current action: {current_action}, {storage.get_last_action()}")
     return False
 
-def send_action_to_mt5(data, symbol, stop_loss_pips=5, take_profit_pips=5, lots=75.0, code_multiplier=1, storage=None, reverse=True):
+def send_action_to_mt5(data, symbol, stop_loss_pips=5, take_profit_pips=5, lots=15.0, code_multiplier=1, storage=None, reverse=False):
     last_action = data["Action"].iloc[-1]
     if reverse:
         if last_action == "Buy":
@@ -681,8 +676,6 @@ def load_data(
     risk_options = [initial_capital * 0.95]
 
     output_file = "best_hyperparameters.txt"
-
-    return data, predictions, probabilities, results, analysis_levels, threshold_options, risk_options, 0, output_file
     summatory_of_indicators = forex_indicate(file_path, web_scraping)
     
     if summatory_of_indicators >= advisor_threshold:

@@ -111,7 +111,6 @@ def get_conditions(data, level, threshold=0.5, reverse=False):
         sell_short = (data['Candle_Pattern'] == 'Bullish Engulfing') | (data['RSI'] > 70)
         buy_to_cover = (data['Candle_Pattern'] == 'Bearish Engulfing') | (data['RSI'] < 30)
 
-    return data
     elif level == 5:
         buy_long = (data['Stoch_%K'] < 20) & (data['Low'] > data['Support'])
         sell_long =  (data['Stoch_%K'] > 80) & (data['High'] < data['Resistance'])
